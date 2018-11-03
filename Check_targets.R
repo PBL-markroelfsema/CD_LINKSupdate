@@ -90,6 +90,7 @@ Check_targets_NPi_update <- select(Check_targets_NPi_update, Policy_ID, R_Variab
 
 write.table(Check_targets_NPi_update , "data/IndicatorOutput_NPi_update.csv", sep=";", row.names=FALSE)
 
+
 # plot for one region, two scenario
 ggplot() + geom_line(data=filter(NPii$EMISCO2EQ_indicator, year>=2010, year<=2030, region=="EU"), aes(year, value, colour="NPi_2017") ) + 
   geom_line(data=filter(NPi_update_i$EMISCO2EQ_indicator, year>=2010, year<=2030, region=="EU"), aes(year, value, colour="NPi_update")) + 
