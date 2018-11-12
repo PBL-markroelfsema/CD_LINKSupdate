@@ -109,3 +109,10 @@ ggplot() + geom_line(data=filter(NPii$EMIS_transport, year>=2010, year<=2030, re
   scale_colour_manual(name="Scenario",values=c(NPi_2017="blue", NPi_update="green")) +
   ylim(0, NA) +
   labs(y="Emissions transport (MtCO2eq)", x = "Year")
+
+NoPolicy_GHG_sector <- filter(NoPolicy_update_ind$EMISCO2EQ, region=="EU", year>=1990, year<=2030)
+NoPolicy_GHG_sector <- mutate(NoPolicy_GHG_sector, scenario="NoPolicy")
+NPi_GHG_sector <- filter(NPi_update_ind$EMISCO2EQ, region=="EU", year>=1990, year<=2030)
+NPi_GHG_sector <- mutate(NPi_GHG_sector, scenario="NPi")
+GHG_sector_EU <- rbind(NoPolicy_GHG_sector, NPi_GHG_sector)
+write.table(GHG_sector_EU , "data/Sector_emissions_EU.csv", sep=";", row.names=FALSE)
