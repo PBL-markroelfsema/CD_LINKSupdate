@@ -18,15 +18,15 @@ TIMERGeneration = "TIMER_2015"
 # Create in excel list of variables/region combinations for which you want to TIMER output --> data/IndicatorInput.csv
 # Create this output based on Import_TIMER_output and Process_TIMER_ output --> data/IndicatorOutput.csv
 # This csv file can be imported in Excel
-NoPolicy <- ImportTimerScenario('NoPolicy','NoPolicy', Rundir, Project, TIMERGeneration)
-NoPolicy_i <- ProcessTimerScenario(NoPolicy, Rundir, Project)
-NPi <- ImportTimerScenario('NPi','NPi', Rundir, Project, TIMERGeneration)
-NPii <- ProcessTimerScenario(NPi, Rundir, Project)
+NoPolicy <- ImportTimerScenario('NoPolicy','NoPolicy', Rundir, Project, TIMERGeneration, Policy=TRUE)
+NoPolicy_i <- ProcessTimerScenario(NoPolicy, Rundir, Project, Policy=TRUE)
+NPi <- ImportTimerScenario('NPi','NPi', Rundir, Project, TIMERGeneration, Policy=TRUE)
+NPii <- ProcessTimerScenario(NPi, Rundir, Project, Policy=TRUE)
 
 
 # Read no policy scenario
-NoPolicy_update <- ImportTimerScenario('NoPolicy_update','NoPolicy_update', Rundir, Project, TIMERGeneration)
-NoPolicy_update_i <- ProcessTimerScenario(NoPolicy_update, Rundir, Project)
+NoPolicy_update <- ImportTimerScenario('NoPolicy_update','NoPolicy_update', Rundir, Project, TIMERGeneration, Policy=TRUE)
+NoPolicy_update_i <- ProcessTimerScenario(NoPolicy_update, Rundir, Project, Policy=TRUE)
 
 # Make file with variable names from list
 var_names_bl <- as.data.frame(names(NoPolicy_update))
@@ -66,8 +66,8 @@ write.table(Check_targets_NoPolicy_update , "data/IndicatorOutput_NoPolicy_updat
 
 #NPi_update
 # Read current national policies scenario
-NPi_update <- ImportTimerScenario('NPi_update','NPi_update', Rundir, Project, TIMERGeneration)
-NPi_update_i <- ProcessTimerScenario(NPi_update, Rundir, Project)
+NPi_update <- ImportTimerScenario('NPi_update','NPi_update', Rundir, Project, TIMERGeneration, Policy=TRUE)
+NPi_update_i <- ProcessTimerScenario(NPi_update, Rundir, Project, Policy=TRUE)
 
 Check_targets_NPi_update <- NULL
 for (i in 1:nrow(Read_CD_LINKS))
@@ -89,30 +89,3 @@ for (i in 1:nrow(Read_CD_LINKS))
 Check_targets_NPi_update <- select(Check_targets_NPi_update, Policy_ID, R_Variable, region, unit, everything())
 
 write.table(Check_targets_NPi_update , "data/IndicatorOutput_NPi_update.csv", sep=";", row.names=FALSE)
-
-
-# plot for one region, two scenario
-ggplot() + geom_line(data=filter(NPii$EMISCO2EQ_indicator, year>=2010, year<=2030, region=="EU"), aes(year, value, colour="NPi_2017") ) + 
-  geom_line(data=filter(NPi_update_i$EMISCO2EQ_indicator, year>=2010, year<=2030, region=="EU"), aes(year, value, colour="NPi_update")) + 
-  scale_colour_manual(name="Scenario",values=c(NPi_2017="blue", NPi_update="green")) +
-  ylim(0, NA) +
-  labs(y="Total GHG Emissions transport, incl LULUCF (MtCO2eq)", x = "Year")
-
-ggplot() + geom_line(data=filter(NPii$EMIS_ETS, year>=2010, year<=2030, region=="EU"), aes(year, value, colour="NPi_2017") ) + 
-           geom_line(data=filter(NPi_update_i$EMIS_ETS, year>=2010, year<=2030, region=="EU"), aes(year, value, colour="NPi_update")) + 
-           scale_colour_manual(name="Scenario",values=c(NPi_2017="blue", NPi_update="green")) +
-           ylim(0, NA) +
-           labs(y="Emissions energy/industry (MtCO2eq)", x = "Year")
-
-ggplot() + geom_line(data=filter(NPii$EMIS_transport, year>=2010, year<=2030, region=="EU"), aes(year, value, colour="NPi_2017") ) + 
-  geom_line(data=filter(NPi_update_i$EMIS_transport, year>=2010, year<=2030, region=="EU"), aes(year, value, colour="NPi_update")) + 
-  scale_colour_manual(name="Scenario",values=c(NPi_2017="blue", NPi_update="green")) +
-  ylim(0, NA) +
-  labs(y="Emissions transport (MtCO2eq)", x = "Year")
-
-NoPolicy_GHG_sector <- filter(NoPolicy_update_ind$EMISCO2EQ, region=="EU", year>=1990, year<=2030)
-NoPolicy_GHG_sector <- mutate(NoPolicy_GHG_sector, scenario="NoPolicy")
-NPi_GHG_sector <- filter(NPi_update_ind$EMISCO2EQ, region=="EU", year>=1990, year<=2030)
-NPi_GHG_sector <- mutate(NPi_GHG_sector, scenario="NPi")
-GHG_sector_EU <- rbind(NoPolicy_GHG_sector, NPi_GHG_sector)
-write.table(GHG_sector_EU , "data/Sector_emissions_EU.csv", sep=";", row.names=FALSE)
