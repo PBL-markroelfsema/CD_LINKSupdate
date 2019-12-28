@@ -51,23 +51,6 @@ NPi_update_PowerPlantStandard_i <- ProcessTimerScenario(NPi_update_PowerPlantSta
 NPi_update_CarbonTax <- ImportTimerScenario('NPi_update_CarbonTax','NPi_update', Rundir, Project, TIMERGeneration)
 NPi_update_CarbonTax_i <- ProcessTimerScenario(NPi_update_CarbonTax, Rundir, Project)
 
-# sensitivity on power plant standard, India - [800-880gCO2/KWh], China [360-440gCO2/KWh]
-NPi_update_PowerPlantStandard880 <- ImportTimerScenario('NPi_update_PowerPlantStandard_880','NPi_update', Rundir, Project, TIMERGeneration)
-NPi_update_PowerPlantStandard880_i <- ProcessTimerScenario(NPi_update_PowerPlantStandard880, Rundir, Project)
-NPi_update_PowerPlantStandard860 <- ImportTimerScenario('NPi_update_PowerPlantStandard_860','NPi_update', Rundir, Project, TIMERGeneration)
-NPi_update_PowerPlantStandard860_i <- ProcessTimerScenario(NPi_update_PowerPlantStandard860, Rundir, Project)
-NPi_update_PowerPlantStandard840 <- ImportTimerScenario('NPi_update_PowerPlantStandard_840','NPi_update', Rundir, Project, TIMERGeneration)
-NPi_update_PowerPlantStandard840_i <- ProcessTimerScenario(NPi_update_PowerPlantStandard840, Rundir, Project)
-NPi_update_PowerPlantStandard820 <- ImportTimerScenario('NPi_update_PowerPlantStandard_820','NPi_update', Rundir, Project, TIMERGeneration)
-NPi_update_PowerPlantStandard820_i <- ProcessTimerScenario(NPi_update_PowerPlantStandard820, Rundir, Project)
-NPi_update_PowerPlantStandard800 <- ImportTimerScenario('NPi_update_PowerPlantStandard_800','NPi_update', Rundir, Project, TIMERGeneration)
-NPi_update_PowerPlantStandard800_i <- ProcessTimerScenario(NPi_update_PowerPlantStandard800, Rundir, Project)
-
-NPi_update_PowerPlantStandard_China750 <- ImportTimerScenario('NPi_update_PowerPlantStandard_China_750','NPi_update', Rundir, Project, TIMERGeneration)
-NPi_update_PowerPlantStandard_China750_i <- ProcessTimerScenario(NPi_update_PowerPlantStandard_China750, Rundir, Project)
-NPi_update_PowerPlantStandard_China840 <- ImportTimerScenario('NPi_update_PowerPlantStandard_China_840','NPi_update', Rundir, Project, TIMERGeneration)
-NPi_update_PowerPlantStandard_China840_i <- ProcessTimerScenario(NPi_update_PowerPlantStandard_China840, Rundir, Project)
-
 # general variables
 reg <- unique(NPii$EMISCO2EQ$region)
 
@@ -197,33 +180,6 @@ NPi_reductions <- mutate(NPi_reductions, policy="All")
 
 Reductions <- rbind(REN_reductions, PowerPlantStandard_reductions) %>% rbind(CarbonTax_reductions) %>% rbind(NPi_reductions)
 Reductions_India_2030 <- filter(Reductions, year==2030, region=="INDIA")
-
-#1C Emission reductions different new power plant standards
-NoPol2018_CO2EQ <- mutate(NoPolicy_update_i$EMISCO2EQ, scenario="NoPolicy 2018")
-NPi2018_PowerPlantStandard880_CO2EQ <- mutate(NPi_update_PowerPlantStandard880_i$EMISCO2EQ, scenario="NPi 2018 PPS India 880, China 440")
-NPi2018_PowerPlantStandard860_CO2EQ <- mutate(NPi_update_PowerPlantStandard860_i$EMISCO2EQ, scenario="NPi 2018 PPS India 860, China 420")
-NPi2018_PowerPlantStandard840_CO2EQ <- mutate(NPi_update_PowerPlantStandard840_i$EMISCO2EQ, scenario="NPi 2018 PPS India 840, China 400")
-NPi2018_PowerPlantStandard820_CO2EQ <- mutate(NPi_update_PowerPlantStandard820_i$EMISCO2EQ, scenario="NPi 2018 PPS India 820, China 380")
-NPi2018_PowerPlantStandard800_CO2EQ <- mutate(NPi_update_PowerPlantStandard800_i$EMISCO2EQ, scenario="NPi 2018 PPS India 800, China 360")
-NPi2018_PowerPlantStandard_China750_CO2EQ <- mutate(NPi_update_PowerPlantStandard_China750_i$EMISCO2EQ, scenario="NPi 2018 PPS China 750")
-NPi2018_PowerPlantStandard_China840_CO2EQ <- mutate(NPi_update_PowerPlantStandard_China840_i$EMISCO2EQ, scenario="NPi 2018 PPS China 840")
-
-Graph_compare_India_PPS <- rbind(NPi2018_PowerPlantStandard880_CO2EQ) %>% 
-  rbind(NPi2018_PowerPlantStandard860_CO2EQ) %>% 
-  rbind(NPi2018_PowerPlantStandard840_CO2EQ) %>%
-  rbind(NPi2018_PowerPlantStandard820_CO2EQ) %>% 
-  rbind(NPi2018_PowerPlantStandard800_CO2EQ)
-ggplot() + geom_line(data=filter(Graph_compare_India_PPS, GHG_Category=="EMISCO2EQ", main_sector=="Total", year>=2010, year<=2030, region=="INDIA"), aes(year, value, colour=scenario) ) +
-  ylim(0, NA) +
-  labs(y="GHG Emissions", x = "Year") + 
-  theme_bw()
-
-Graph_compare_China_PPS <- rbind(Graph_compare_India_PPS, NPi2018_PowerPlantStandard_China750_CO2EQ) %>%
-                           rbind(NPi2018_PowerPlantStandard_China840_CO2EQ)
-ggplot() + geom_jitter(data=filter(Graph_compare_China_PPS, GHG_Category=="EMISCO2EQ", main_sector=="Total", year>=2010, year<=2030, region=="CHN"), aes(year, value, colour=scenario) ) +
-  ylim(0, NA) +
-  labs(y="GHG Emissions", x = "Year") + 
-  theme_bw()
 
 NoPol2018_eff <- mutate(NoPolicy_update_i$ElecEffCoalNewPct, scenario="NoPolicy 2018")
 NPI_PPS_800_eff <- mutate(NPi2018_PowerPlantStandard800$ElecEffCoalNewPct, scenario="efficiency 800/360")

@@ -1,7 +1,7 @@
 library(dplyr)
 library(tidyverse)
 
-setwd("~/disks/y/ontwapps/Timer/Users/Mark/CD_LINKSupdate/6_R/CD_LINKSupdate")
+setwd("~/disks/y/Kennisbasis/IMAGE/model/users/mark/timer/CD_LINKSupdate/6_R/CD_LINKSupdate")
 source("../TIMER_output/functions/Settings.R")
 source("../TIMER_output/functions/General Functions.R")
 source("../TIMER_output/functions/Import_TIMER_output.R")
@@ -9,7 +9,7 @@ source("../TIMER_output/functions/Process_TIMER_output.R")
 source("../TIMER_output/functions/pbl_colors.R")
 source("Settings_indicators.R")
 
-Rundir=paste("~/disks/y/ontwapps/Timer/Users/Mark", sep="")
+Rundir=paste("~/disks/y/Kennisbasis/IMAGE/model/users/mark/timer", sep="")
 Project=paste("CD_LINKSupdate")
 TIMERGeneration = "TIMER_2015"
 
