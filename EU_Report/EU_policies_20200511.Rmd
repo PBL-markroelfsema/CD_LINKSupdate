@@ -1,0 +1,348 @@
+---
+title: "Assessment of the impact of EU climate-, energy and land use policies"
+subtitle: "Working paper (for internal use only)"
+author: "Mark Roelfsema"
+date: "08/04/2020"
+output:
+  bookdown::pdf_document2: default
+  #pdf_document: default
+  fig_caption: yes
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+- \usepackage{caption}
+bibliography: Literature_MR.bib
+link-citations: yes
+csl: climate-policy.csl
+---
+
+\newpage
+
+```{r setup, include=FALSE, echo=FALSE}
+library(knitr)
+library(kableExtra)
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+options(knitr.kable.NA ='')
+source("../EU_Report/Init_EU_Report.R")
+```
+
+```{r read data, echo=FALSE}
+source("../EU_Report/ReadData_EU_report.R")
+```
+
+# Introduction
+
+The European Union acts on climate change by mitigating greenhouse gas emissions with implementation of a large portfolio of climate-, energy- and land use policies. Key targets are set in the 2020 climate & energy package and the 2030 climate & energy framework, and they also include some major policies and legislation, such as the Emission Trading System (ETS). In addition, other policies are implemented to ensure meeting these key targets, such as the CO~2~ performance standard for cars and heavy-duty vehicles. Most of the individual policies from these frameworks have been implemented at this moment, only some of the 2030 are still planned policies. In addition, the EU has also put forward a 2050 long-term strategy that contains ambitions for the longer-term. 
+
+This working paper is written as part of the SENTINEL project[^1] that aims to develop a modelling framework to support policymakers and the wider public in the European energy transition. The purpose of this paper is to highlight the main results of the assessment of EU climate policies, and to describe the methods used for the assesment with the IMAGE model and document outstanding issues. We will only assess the impact of policies from the 2020 and 2030 packages and supporting policies on greenhouse gas emissions and energy use, with a focus on 2030. This paper describes the results in terms of reductions of total greenhouse gas emissions. In addition, IMAGE/TIMER emission- and energy trends are compared to historical data from the European Energy Agency (EEA),  International Energy Agency (IEA) or United Nations Framework for Climate Change (UNFCCC).
+
+The assessment was done with the IMAGE model, which is an integrated assessment model that includes the TIMER energy model and a land-use model. The IMAGE model is divided into 26 regions, of which West-Europe (WEU) and Central-Europa (CEU) are two seperate regions. The regions togeter represent the Europe region, and it is assumed that EU28 policies are implemented in all countries from these two regions. The Europe region covers the EU28 countries, but also Serbia, Switzerland, Norway, Bosnia and Herzegovina, Iceland, Macedonia, Albania, Montenegro, San Marino, Liechtenstein and Monaco. Together, the countries outside the EU28 represent 190 Mt CO~2~eq emissions in 2017, which is 4.5% of the Europe region. For now we still assume Great Britain is part of the EU28.
+
+[^1]: https://sentinel.energy/
+
+The main policy package is the 2030 energy & climate framework that has three key targets for 2030
+
+1. Cut greenhouse gas emissions by 40% relative to 1990
+2. Achieve at least a 32% share of renewable energy
+3. Improve energy efficiency by 32.5%
+
+
+The EU Climate action website (@EuropeanCommission2020) describes all EU climate policies, that were implemented to achieve the key targets. Based on this list, we identied those with quantifiable targets (see Table \@ref(tab:OverviewEUPolicies)). Some overall policies (e.g. Energy Efficiency Directive) were not exlicitly implemented into the IMAGE model, but it was checked afterward whether the targets were achieved.
+
+The policies from Table \@ref(tab:OverviewEUPolicies) that were not implemented in the IMAGE model are
+
+* Effort sharing targets for non-CO2 and AFOLU
+* Innovation fund
+* Fuel Quality
+* Shipping
+* Aviation
+* AFOLU policies
+
+\newpage
+\blandscape
+
+```{r OverviewEUPolicies, echo=FALSE, warning=FALSE}
+EU_policies <- read_excel(path="../data/EU climate policies.xlsx", sheet="EU policies", range="A1:E39", col_names=TRUE) %>% as.data.frame() %>%
+               select(-Sector)
+#EU_policies[is.na(EU_policies)] <- " "
+#pander(EU_policies, keep.line.breaks = FALSE, justify = 'left', missing = ' ', split.cells = c(3,2,50))
+knitr::kable(EU_policies, caption = "EU climate-, energy and land use policies, I=implemented, C=checked, NI=not implemented") %>% kable_styling(latex_options="scale_down")
+```
+
+\elandscape
+
+\newpage
+
+# EU greenhouse gas emissions
+
+Total greenhouse gas emissions in 2017 are 4,165 MtCO~2~eq in Europe, and 4,065 MtCO~2~eq in the EU28 (@UNFCCC, @UNFCCC2019). Figure \@ref(fig:GHGemissions) splits up the greenhouse gas emissions per sector and the categories 'Total' and 'Total excluding LULUCF'. Differences in historical emissions between IMAGE and the UNFCCC are especially large for LULUCF emissions, which is due to differences in accounting.
+
+```{r GHGemissions, echo=FALSE,  fig.cap="EU greenhouse gas emissions", fig.pos = 'h'}
+source("../EU_Report/Plot_EU_GHG_graph.R")
+g_GHG_EU
+
+```
+
+# EU Impact of climate policies
+
+The EU has put forward a 20% reduction target for 2020, and a 40% reduction target by 2030 relative to 1990, excluding CO~2~ land use emissions. These are key targets of the 2020 climate & energy package, and 2030 climate & energy framework. Based on UNFCCC data (@UNFCCC2019) this would imply an emission level of
+`r format(round((1-0.2)*filter(GHG_emissions_UNFCCC, Year==1990, Region=="EU28", Gas=="Total", Sector=="Total excl. LULUCF")$Value,0), big.mark=",")` 
+MtCO~2~eq (excl. LULUCF) by 2020 and
+`r format(round((1-0.4)*filter(GHG_emissions_UNFCCC, Year==1990, Region=="EU28", Gas=="Total", Sector=="Total excl. LULUCF")$Value,0), big.mark=",")` 
+MtCO~2~eq by 2030. However, based on the IMAGE 1990 data, the emissions levels for the Europe region with the same percentage of reductions would be 
+`r format(round((1-0.2)*filter(NPii$EMISCO2EQexcl_LULUCF_indicator, year==1990, region=="EU")$value,0), big.mark=",")` 
+and 
+`r format(round((1-0.4)*filter(NPii$EMISCO2EQexcl_LULUCF_indicator, year==1990, region=="EU")$value,0), big.mark=",")` 
+MtCO~2~eq. With current implemented policies (see Table \@ref(tab:OverviewEUPolicies)), the EU is estimated to reduce greenhouse gas emissions (excluding LULUCF) by 
+`r round(-100*(filter(NPii$EMISCO2EQexcl_LULUCF_indicator, year==2030, region=="EU")$value/filter(NPii$EMISCO2EQexcl_LULUCF_indicator, year==1990, region=="EU")$value-1),1)`
+% relative to 1990 by 2030.  
+
+__Future improvements__
+
+* Implement remaining policies that have not been implemented yet in IMAGE, but might result in additional reductions. These are
+  + Effort sharing directive. Find out whether this has already been accepted by Member States
+  + CO~2~ performance standards for vans. Check if they should be included in cars or medium truck mode of the TIMER model
+  + Aviation, as European flights are part of the ETS
+  + Rennovation of existing buildings
+* Check what non-EU28 countries are participating in EU policies (e.g. ETS)
+
+```{r GHGTarget, fig.cap="The impact of EU emission reduction targets for 2020 and 2030 on greenhous gas emissions", echo=FALSE, fig.pos = 'h'}
+source("../EU_Report/Plot_EU_GHG_Target.R")
+g_GHG_Target_EU
+
+```
+
+# Energy efficiency directive
+
+The Energy Efficiency Directive includes measures that together would need to achieve the 20% efficiency target from the 2020 energy & climate package and the 32.5% efficiency target from the 2030 climate & energy framework. The targets are set relative to the PRIMES baseline from 2007, and would result in no more than 1,483 Mtoe[^2] primary energy or 1,086 Mtoe final energy by 2020 and 1,273 Mtoe primary energy or 956 Mtoe final energy by 2030. 
+
+[^2]: Mega tonnes of oil equivalent
+
+This economy-wide target is not directly implemented in the IMAGE model, but should be achieved by the implementation of the Emission Trading System (ETS), the Buildings Directive and transport efficinecy policies. Figure \@ref(fig:EnergyEfficiency) shows the efficieny improvement in the current policies scenario. It compares the historical data with primary and final energy from the International Energy Agency (IEA) (@IEA2018). In addition, it compares the results for 2030 with the absolute effiency goal from the Energy Efficiency Directive, and with the percentage effiency improvement relative to 2010 from the PRIMES policy scenario (@Commission2016) applied to the TIMER 2010 energy use. The absolute targets only cover the EU28 countries, for which primary and final energy use in 2015 are around 5% lower compared to the Europe region (@IEA2018). The latter relative target to 2010 is almost achieved in the IMAGE model.
+
+
+```{r EnergyEfficiency, echo=FALSE, fig.cap="Impact of EU Energy Efficiency directive on energy use"}
+source("../EU_Report/Plot_EU_Energy_Efficiency.R")
+g_EE_EU
+```
+
+__Future improvements__
+
+* It is unclear which 2007 projections are refered to in the EU 2012 Directive, or if numbers have been changed or updated after the publication. The published 'European Energy and Transport - update 2007' contains a much higher primary energy consumption, even given the fact that it is for the EU27 region (excluding Croatia) and not for the EU28 region. In addition, it is also not clear if the amendment of the EU Energy Efficiency Directive in 2018 refers to the same baseline.
+* These measures from the Energy Efficiency Diretive have not been implemented in the IMAGE model
+  + Energy efficient rennovation of at least 3% per year for government buildings
+  + Long-term renovation strategies for individual Member States
+  + Mandatory energy efficiency certifictates 
+  + Smart metering
+  + Obliation scheme for energy companies to save 1.5% energy for final consumers
+  + Energy audits for large companies
+
+# Renewable energy directive
+
+The Renewable Energy Directive is linked to the key renewable targets from the 2020 energy & energy package and 2030 energy & energy framework. The directives require a 20% renewable share of gross final energy consumption by 2020, and 32% by 2030. In addition, it includes a renewable transport share of 10% by 2020 and 14% by 2030. The biofuels in the transport sector are bound to sustainability criteria. 
+
+The overall renewable target is not implemented directly in the IMAGE model, but achievement is checked afterwards. The overall renewable target for 2030 is almost met (see  Figure \@ref(fig:RenewableEnergyTarget)). The renewable target for 2020 has been implemented in the IMAGE model, and is enforced in both the travel and freight subsectors (see  Figure \@ref(fig:RenewableTransportTarget)). As the renewable fuel target applies to road transport, the targeted travel modes in the model are 'cars', 'busses', 'medium trucks', and 'heavy trucks'. The 2030 target is already met in the 'No policy baseline' (see \@ref(fig:RenewableTransportTarget)).
+
+```{r RenewableEnergyTarget, echo=FALSE, fig.cap="Impact of EU Renewable Energy directive on renewable final energy share", fig.pos = 'h', out.width = '60%', out.height = '60%'}
+source("../EU_Report/Plot_EU_Renewables.R")
+g_REN_final_EU + g_REN_TPES_EU
+```
+
+```{r RenewableTransportTarget, echo=FALSE, fig.cap="Impact of achieving EU renewable transport target on renewable transport share", fig.pos = 'h', out.width = '60%', out.height = '60%'}
+source("../EU_Report/Plot_EU_Transport_Renewables.R")
+g_ren_trp / (g_ren_travel + g_ren_freight)
+```
+
+__Future improvements__
+
+* Find out how 'gross final energy consupmtion' is defined. This would explain the difference in renewable share of final energy between EEA and IEA
+  + Is there a different definition of gross final energy consumption from EEA and final energy from IEA?
+  + Is there a different assumption of renewables (for IEA we have included biomass (not traditional) and renewable electricity (for IEA: hydro, solar PV/CSP, wind, biomass)
+* It is not clear whether renewable fuels also include renewable electricity or only target biofuels. 
+
+# Emission Trading System
+
+The Emission Trading System (ETS) has an overall target of 21% emission reduction relative to 2005 by 2020, and 43% by 2030. It covers 11,000 heavy energy-using installations from the energy supply and industry sector, and also airlines operating between participating countries. It covers 46.8% of total greenhouse gas emissions excl. LULUCF CO~2~ (@EuropeanCommission2020) and 80% of greenhouse gas emissions from the energy supply and industry sector (@EuropeanEnvironmentAgency2019, @UNFCCC2019).
+
+Implementation in the IMAGE model occurs with one carbon tax on the industry and energy supply sector, assuming that the percentage reduction targets apply to 80% of the greenhouse gas emissions from these two sectors in 2005 (see Figure \@ref(fig:ETS)). We assume that no surplus emissions exist anymore at 2030. Figure \@ref(fig:ETS) compares the greenhouse gas emissions from the industry and energy supply sector of the IMAGE Europe region with the EU28 ETS greenhouse gas emissions from the EU Reference Scenario 2016 (@Commission2016) and the greenhouse gas emissions from the ETS registry (@EuropeanEnvironmentAgency2019).
+
+```{r ETS, echo=FALSE,  fig.cap="Impact of Emission Trading System on EU greenhouse gas emissions", fig.pos = 'h', out.width = '60%', out.height = '60%'}
+source("../EU_Report/Plot_EU_ETS.R")
+g_EU_ETS
+```
+
+# Transport sector
+
+Several EU policies exist in the transport sector, such as the CO~2~ performance standards (including benchmarks for electric vehicles), renewable fuel regulation (including sustainability criteria), fuel quality regulation, and policies for air transport and shipping (see Table \@ref(tab:OverviewEUPolicies)). The following were included in our assessment (see Table \@ref(tab:TransportPolicies))
+
+* Renewable target for road transport (biofuels, electric cars)
+* CO~2~ performance standards for new passenger cars
+* Benchmark for new electric cars
+* CO~2~ performance standards for heavy trucks (large lorries)
+
+```{r GHGEmissionsTransport, echo=FALSE, fig.cap="EU transport greenhouse gas emissions per mode", fig.pos = 'h', out.width = '60%', out.height = '60%'}
+source("../EU_Report/Plot_EU_Transport.R")
+g_transport_EU
+```
+
+The following transport policies were not included in the current assessment
+
+* Policies for light commercial vehicles, as it is unclear if they should be mapped to cars or medium-trucks
+* CO~2~ performance standards for busses, smaller lories, coaches and trailers, as these have not been decided yet and targets will be set after the review in 2022 (planned policy)
+* Policies for aviation (part of ETS) and shipping (IMO standards)
+
+```{r TransportPolicies, echo=FALSE, warning=FALSE}
+EU_Transport_Policies_Policy = c("Renewable fuel target", "", "CO2 performance standard cars", "", "", "Electric cars benchmark", "", "CO2 performance standard heavy trucks", "")
+EU_Transport_Policies_year = c(2020, 2030, 2021, 2025, 2030, 2025, 2030, 2025, 2030)
+EU_Transport_Policies_Target = c("10% share of renewable fuels", "14% share of renewable fuels" ,
+                                 "95gCO2/km","15% reduction relative to 2021","37.5% reduction relative to 2021",
+                                 "15% share of new registrations", "35% share of new registrations",
+                                 "15% reduction relative to 2020", "30% reduction relative to 2020")
+EU_Transport_Policies <- data.frame(EU_Transport_Policies_Policy, EU_Transport_Policies_year, EU_Transport_Policies_Target) %>% 
+                         rename(Policy=EU_Transport_Policies_Policy, Year=EU_Transport_Policies_year, Target=EU_Transport_Policies_Target)
+
+knitr::kable(EU_Transport_Policies, caption = "EU Transport policies included in the assessment") %>% 
+       row_spec(0,bold=TRUE) %>%
+       kable_styling(latex_options="scale_down", font_size=7)  
+```
+
+
+## Renewable fuel target and benchmarks for electric vehicles
+The IMAGE transport module includes different transport modes for travel and freight transport. The modes that were included in the policy assessment are cars and heavy trucks. Only for the renewable fue target more modes were included. The freight module also contains medium trucks, but more insights are necessary on how to map EU transport modes to the IMAGE transport modes [^3]
+
+[^3]: See https://www.transportpolicy.net/standard/eu-vehicle-definitions/
+
+The renewable transport target is part of the Renewable Energy Directive (see Figure \@ref(fig:RenewableTransportTarget)) and mainly deals with biofuels and renewable electricity. This policy target overlaps with the benchmark for electric cars that is part of regulation on CO~2~ performance standards for new cars, commercial vehicles and heavy trucks. The benchmarks for electric cars is set to a share of 15% low-emission vehicles (cars and commercial vehicles) by 2025, and a 35% low-emissions share for new cars and 30% for new commercial vehicles by 2030. Low-emission vehicles are defined as those that have tailpipe emisions up to 50gCO~2~/km. In contrast, there is no benchmark set for electric heavy trucks, although there is a credit system in place which is part of the CO~2~ performance standards regulation that gives higher weights to zero- or low-emission vehicles. This credit system also exists for cars and commercial vehicles.
+
+The benchmarks for electric cars were implemented in the IMAGE model by enforcing this share in the model. As explained before, the model target is only applied to electric cars, and not to commercial vehicels (vans). Also, the credit system as part of the CO~2~ performance standard was not included in the assessment. The focus for implementation in the IMAGE model was 2030, and the 2020 target was therefore overachieved (see Figure \@ref(fig:ElectricCarsBenchmark)).
+
+```{r ElectricCarsBenchmark, echo=FALSE, fig.cap="Impact of achieving EU targets for electric cars on electric car share", fig.pos = 'h', out.width = '60%', out.height = '60%'}
+source("../EU_Report/Plot_EU_ElectricCars.R")
+g_electric_new_cars
+```
+
+__Future improvements__
+
+* EU electric share target also includes plugins. Change TIMER indicator to include plugins
+* Include the electric benchmark for commercial vehicles
+* Take into account the credit system for electric vehicles in the CO~2~ performance standards
+
+## CO~2~ performance standards for cars and trucks
+
+The CO~2~ performance standard for cars sets a fleet-wide standard for new car registrations. This means that car manufacturers are obliged to make sure that the average CO~2~ emissions of their sold cars per year meet a certain target. This target is defined in terms of tailpipe emissions, so does not include CO~2~ emissions from electricity consumption of electric cars. The target for 2021 is set to 95gCO~2~/km. The 2025 and 2030 targets are set relative to this year, and aim for a fleet-wide reduction of 15% by 2025 and 37.5% by 2030. This is 15% and 30% for commercial vehicles. 
+
+The CO~2~ standard for cars is implemented in the IMAGE model by increasing the energy tax on fossil fuels to the level that the average CO~2~ intensity for new cars is equal to the target. By increasing the energy tax, the model changes the annual composition of new cars in comparison to the No new policies baseline and favours non-fossil fueled cars. The CO~2~ intensity for gasoline and diesel cars is shown in Figure \@ref(fig:CarStandards). In practice car manufacturers will achieve these targets by improving the efficiency of existing fossil-fuel cars, ánd develop electric or hydrogen cars. Implementing both at the same time in the TIMER model is not straightforward, and we have therefore only modelled the switching to more effient car types. As energy use for cars in TIMER is described in terms of MJ/pkm, the CO~2~ intensity cars needed to be calculated afterwards in terms of gCO~2~/km. For this we have made the following assumptions
+
+* CO~2 intensity fuels is calculated based on the assumption that there are only gasoline and diesel cars, and they have a fixed ratio (gasoline=43% [^4]). This CO~2~ intensity is also used for biofuel and gas fueled cars. Electric cars have no tailpipe CO~2~ emissions.
+* For this calcuation, we use a CO~2~ intensity for gasoline of 2.4 gCO2/l, and CO~2~ intensity for diesel of 2.7 gCO2/l
+* The assumed energy intensity for these fuels is 34.841 MJ/l
+* The average load for cars is 1.6 persons
+
+[^4]: http://ec.europa.eu/eurostat/statistics-explained/images/3/3c/New_passenger_cars_by_type_of_engine_fuel%2C_2013.png
+
+Figure \@ref(fig:CarStandards) shows the impact the standards on CO~2~ intensity, and compares it with historical data of the Energy Environmental Agency (EEA) and the Odyssee-MURE database. The average CO~2~-intensity of new cars by 2030 improves from 
+`r round(filter(NoPolicyi$CO2_intensity_fleet_new_cars_tailpipe, carrier=="total", region=="EU", year==2030)$value,1)`
+to 
+`r round(filter(NPii$CO2_intensity_fleet_new_cars_tailpipe, carrier=="total", region=="EU", year==2030)$value,1)`
+gCO~2~/km
+
+
+```{r CarStandards, echo=FALSE, fig.cap="Impact of CO2 standards car co2 efficiency", fig.pos = 'h', out.width = '60%', out.height = '60%'}
+source("../EU_Report/Plot_EU_Cars.R")
+g_co2_new_cars
+```
+
+__Future improvements__
+
+* Check weight gasoline in fossil fuels mix. See
+  + https://www.acea.be/statistics/tag/category/passenger-car-fleet-by-fuel-type
+  + http://ec.europa.eu/eurostat/statistics-explained/images/3/3c/New_passenger_cars_by_type_of_engine_fuel%2C_2013.png
+* Add other fuels (e.g. gas) to the CO~2~ intensity calculations
+* Use load per region, which is available in TIMER
+* Include CO~2~ standards for commercial vehicles
+* Add the credit system for electric cars to the assessment of CO~2~ performance standards
+* Let TIMER choose the composition of new cars by adding a constraint to the multinomial logit function that determines the investments in new cars
+* Make it possible to let TIMER decide on both improving efficiency of fossil-fueled cars, ánd switch to other non-fossil fuel car types 
+
+The CO~2~ performance standards for heavy trucks are divided into large lorries, small lorgies, coaches, trailers and busses. Currently, there is only a CO~2~ performance standard for large lorries, and standards for the other categories will be set after an EU review in 2022. The current standard apply to large lorries that have a mass between 3.5 tonnes and higher (categorie N2 and N3 [^3]). The CO~2~ performance standards aim for an average CO~2~ intensity reduction for new large lorries of 15% relative to 2020 by 2025, and 30% at 2030. The 2020 data is based on the average between 1 July 2019 and June 2020, and has not been fixed yet. 
+
+In the IMAGE model, the performance standards for large lorries are mapped to heavy trucks transport mode. Similar to new cars, the energy tax is increased until the target is met. The reduction in CO~2~ intensity is calculated relative to the IMAGE 2020 values for new heavy trucks. The focus is on achieving the 2030 target (see Figure \@ref(fig:CO2StandardHeavyTrucks))
+
+__Future improvements__
+
+* Check the categorisation of EU trucks and map them to the TIMER implementation (medium- and heavy trucks)
+* Add busses, small lorries, coaches and trailers (after 2022)
+
+
+```{r CO2StandardHeavyTrucks, echo=FALSE, eval=TRUE, fig.cap="Impact of EU CO2 standards on heavy truck co2 efficiency", fig.pos = 'h', out.width = '60%', out.height = '60%'}
+source("../EU_Report/Plot_EU_HvyT.R")
+g_HvyT
+```
+
+# Energy performance of buildings directive
+
+The Building Directive includes a broad range of policies and measures, of which the main obligation is that all new buildingsare are nearly zero-energy (ZNEB) by 31 December 2020. For public buildings this holds already since December 2018. In addition, large renovation will also need to lead to ZNEB buildings. According to the directive, an EU assessment showed that around 3% of the buildings stocks needs to be rennovated to accomplish the EU efficiency ambitions in a cost-effective manner. Near zero-energy is described as very high energy performance and most energy is covered by renewable resources (@JRC2016). The Member States determine themselves what the exact definition of ZNEB is in terms of Kwh/m^2^/y primary energy use. Based on four countries that defined both a minimum energy requirement and a renewable share target for 2020, the range is between 0 and 220 Kwh/m^2^/y. However, more countries had set intermediate energy requirement targets (around 2015), and most were below 100 Kwh/m^2^/y. The energy performance is calculated on the national level with different definitions, and each Member States sets its own minumum requirements. 
+They also need to ensure that major renovations meet a minimum energy performance, but there is no explicit target except for the notion that an average rate of 3% annually is needed in the EU to accomplish the Union’s energy efficiency ambitions in a cost-effective manner.
+
+The residential TIMER model is able to set a ceiling for the amount of space heating (per square metre). It was assumed that near zero-energy buildings would use on average 100 Kwh/m^2^ of primary energy. In addition, we assume that 
+`r round(100*(filter(NoPolicy$FinalEnergy_Residential, enduse_function%in%c('HouseholdAppliances', 'SpaceHeating', 'Total'), region=="EU", population_group=="Total", year==2015) %>%
+         spread(key=enduse_function, value=value) %>%
+         mutate(value=SpaceHeating/(Total-HouseholdAppliances)))$value,1)`
+% of residential energy (excluding appliances) comes from space heating (based on 2015 IMAGE values in the Europe region).
+If we would then also assume that the main energy carrier is gas and gas boilers have an efficiency of 80%[^5], the target for final energy heating from new buildings would be around 55 KWh/m^2^ (=0.20 GJ/m^2^). This target is enforced in the model. The residential renewable target is not explicitly imnplemented, but as part of the renewable target on gross final energy consumption. In addditino, as the IMAGE model version 2015 does not have a detailed service sector, we have assumed that public buildings would reach half of the reductions of the residential buildings (conservative assumption), which was implemented with a carbon tax in the service sector.
+
+[^5]: https://www.energy.gov/energysaver/home-heating-systems/furnaces-and-boilers
+
+The building directive target for near zero buildings results
+`r round(100*(rbind(mutate(NoPolicy$FinalEnergy_Residential, Policy="NoPolicy"), mutate(NPi$FinalEnergy_Residential, Policy="NPi")) %>%
+        filter(enduse_function%in%c('Total'), region=="EU", population_group=="Total", year==2030) %>%
+               spread(key=Policy, value=value) %>%
+               mutate(value=NPi/NoPolicy-1))$value,0)`
+% reductions for the whole building stock by 2030 relative to the NoPolicy scenario (see Figure \@ref(fig:BuildingsStandards)).
+
+__Future improvements__
+
+* Residential model in IMAGE 3.2 is better suited to implement the building code
+* Make the translation of primary energy target to final energy dependent on the composition of energy carriers for heating in the model
+* Explicitly model renewable energy (residential PV)
+* Include insulation, water heating, cooking, lighting 
+* Include the buildings in the service sector
+
+
+```{r BuildingsStandards, echo=FALSE, fig.cap="Impact of EU Buildings directive on energy use of buildings", fig.pos = 'h', out.width = '60%', out.height = '60%'}
+source("../EU_Report/Plot_EU_Buildings.R")
+g_Building_EU
+```
+
+# Labelling energy efficient products
+
+The EU has introduced energy labelling and ecodesign to promote more efficienct energy use of appliances. There are labels for 15 different product groups. The product labelling was implemented in the IMAGE model by applying the energy reductions for 'A' label appliances from @Deetman2012. Figure \@ref((fig:LabellingAppliances) shows the impact on energy use of appliances.
+
+```{r LabellingAppliances, echo=FALSE, fig.cap="Impact of EU product energy labelling", fig.pos = 'h', out.width = '60%', out.height = '60%'}
+source("../EU_Report/Plot_EU_Energy_Efficient_Appliances.R")
+g_Appliances_EU
+```
+
+__Future improvements__
+
+* Investigate whether the real EU energy requirements per product can be translated into the IMAGE model
+
+# F-Gas regulation
+
+The current EU F-gas Regulation was implemented in 2015 and aims to reduce fluorinated gases by two-thirds compared to the 2014 level by 2030. This Regulation also helps the EU to implement the Kigali Amendment that went into force in 2019. This amendment added HFCs to the list of controlled substances in the Montreal Protocol, and defined a phase down that started in 2019.
+
+The F-Gas regulation goal is implemented in the IMAGE model by setting a carbon tax on f-gases to the level forcing a reduction of 66.6% by 2030 relative to 2014 (see Figure \@ref(fig:FGases)).
+
+```{r FGases, echo=FALSE, fig.cap="Impact of EU F-gas regulation EU on f-gas emissions", fig.pos = 'h', out.width = '60%', out.height = '60%'}
+source("../EU_Report/Plot_EU_FGases.R")
+g_FGas_EU
+```
+
+\newpage
+
+# References
+
+<div id="refs"></div>
+  
