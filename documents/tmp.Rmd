@@ -1,0 +1,17 @@
+---
+title: "EU climate- and energy policies"
+author: "Mark Roelfsema"
+date: "08/04/2020"
+output:
+  pdf_document: default
+  html_document: default
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+source("../EU_Report/Init_EU_Report.R")
+```

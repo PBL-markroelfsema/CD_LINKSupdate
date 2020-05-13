@@ -1,0 +1,802 @@
+---
+title: "EU climate- and energy policies"
+author: "Mark Roelfsema"
+date: "08/04/2020"
+output:
+  pdf_document: default
+  html_document: default
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(pander)
+library(dplyr)
+library(tidyverse)
+library(data.table)
+library(gridExtra) #arrangeGrob
+library(RColorBrewer)
+library(patchwork)
+library(readxl)
+library(grid)
+
+source('../../TIMER_output/functions/Settings.R')
+
+HistData_dir <- "C:/Users/markr/OneDrive/Work/data"
+```
+
+```{r read data, echo=FALSE}
+load("../Data/NoPolicy.RData")
+load("../data/NoPolicyi.RData")
+load("../data/NPi.RData")
+load("../data/NPii.RData")
+
+load("../Data/NoPolic_3_2.RData")
+load("../data/NoPolicy_3_2i.RData")
+#load("../data/NPi.RData")
+#load("../data/NPii.RData")
+
+load("../data/GHG_emissions_UNFCCC.RData")
+load("../data/GHG_emissions_UNFCCC_TIMER.RData")
+#load("../data/GHG_emissions_PRIMAP_TIMER.RData")
+```
+
+# EU climate- and energy policies
+\newpage
+\blandscape
+Overview EU climate-, energy- and land-use policies
+```{r report Overview EU policies, echo=FALSE, warning=FALSE}
+EU_policies <- read_excel(path="../data/EU climate policies.xlsx", sheet="EU policies", range="A1:E39", col_names=TRUE) %>% as.data.frame() %>%
+               select(-Sector, -`Model implementation`)
+#EU_policies[is.na(EU_policies)] <- " "
+pander(EU_policies, keep.line.breaks = FALSE, justify = 'left', missing = ' ', split.cells = c(3,2,50))
+```
+\elandscape
+
+#EU greenhouse gas emissions
+
+```{r report GHG emissions, echo=FALSE, warning=FALSE}
+
+sector_order <- c('Total', 'Total excl. LULUCF', 'Energy supply', 'Industry', 'Transport', 'Buildings', 'LULUCF', 'Agriculture', 'Waste', 'Other', 'Bunkers')
+d_EU_GHG_EU28_hist <- filter(GHG_emissions_UNFCCC, Region=="EU28", Gas=="Total") %>% select(-Country, -SubSector)
+d_EU_GHG_WEU_CEU_hist <- filter(GHG_emissions_UNFCCC_TIMER, Region%in%c(11,12), Gas=="Total") %>%
+                    group_by(Source, Gas, Sector, Year, Unit, GWP) %>%
+                    summarise(Value=sum(Value)) %>%
+                    mutate(Region="Europe") %>% as.data.frame()
+d_EU_GHG_hist <- rbind(d_EU_GHG_EU28_hist, d_EU_GHG_WEU_CEU_hist) 
+d_EU_GHG_hist <- spread(d_EU_GHG_hist, key=Region, value=Value) %>%
+                mutate(`Europe excl. EU28` = Europe-EU28) %>%
+                gather(EU28, Europe, `Europe excl. EU28`, key="Region", value="Value") %>%
+                filter(Region!='Europe')
+d_EU_GHG_hist$Region <- factor(d_EU_GHG_hist$Region, levels=c("Europe", "Europe excl. EU28", "EU28"))
+
+TIMER_NoPolicy <- filter(NoPolicyi$EMISCO2EQ, region%in%c('WEU', 'CEU'), year<=2030, GHG_Category=='EMISCO2EQ') %>% mutate(Scenario="No new policies (v2015)")
+TIMER_NoPolicy_3_2 <- filter(NoPolicy_3_2i$EMISCO2EQ, region%in%c('WEU', 'CEU'), year<=2030, GHG_Category=='EMISCO2EQ') %>% mutate(Scenario="No new policies (v3_2)")
+#TIMER_NPi <- filter(NPii$EMISCO2EQ, region%in%c('WEU', 'CEU'), year<=2030, GHG_Category=='EMISCO2EQ') %>% mutate(Scenario="Current policies")
+TIMER_NPi <- NULL
+d_TIMER_total <- rbind(TIMER_NoPolicy, TIMER_NPi) %>% rbind(TIMER_NoPolicy_3_2)
+
+d_EU_GHG_TIMER_total <- d_TIMER_total %>%
+                        select(-GHG_Category) %>%
+                        rename(Sector=main_sector, Region=region, Unit=unit, Year=year, Value=value) %>%
+                        group_by(Scenario, Sector, Year, Unit) %>%
+                        summarise(Value=sum(Value)) %>%
+                        mutate(Region="Europe")
+
+TIMER_total_excl_lulucf_NoPolicy <- filter(NoPolicyi$EMISCO2EQexcl_LULUCF_indicator, region%in%c('WEU', 'CEU'), year<=2030) %>% mutate(Scenario="No new policies (v2015)")
+TIMER_total_excl_lulucf_NoPolicy_3_2 <- filter(NoPolicy_3_2i$EMISCO2EQexcl_LULUCF_indicator, region%in%c('WEU', 'CEU'), year<=2030) %>% mutate(Scenario="No new policies (v3_2)")
+#TIMER_total_excl_lulucf_NPi <- filter(NPii$EMISCO2EQexcl_LULUCF_indicator, region%in%c('WEU', 'CEU'), year<=2030) %>% mutate(Scenario="Current policies")
+TIMER_total_excl_lulucf_NPi <- NULL
+d_TIMER_total_excl_lulucf <- rbind(TIMER_total_excl_lulucf_NoPolicy, TIMER_total_excl_lulucf_NPi) %>% rbind(TIMER_total_excl_lulucf_NoPolicy_3_2)
+
+d_EU_GHG_TIMER_total_excl_lulucf <- d_TIMER_total_excl_lulucf %>%
+                        rename(Region=region, Unit=unit, Year=year, Value=value) %>%
+                        group_by(Scenario, Year, Unit) %>%
+                        summarise(Value=sum(Value)) %>%
+                        mutate(Region="Europe") %>%
+                        mutate(Sector='Total excl. LULUCF')
+                  
+d_EU_GHG_TIMER <- rbind(d_EU_GHG_TIMER_total, d_EU_GHG_TIMER_total_excl_lulucf) %>% as.data.frame()
+#d_EU_GHG_TIMER$Scenario <- factor(d_EU_GHG_TIMER$Scenario, levels=c("No new policies (v2015)", "Current policies (v2015)", "No new policies (v3_2)"))
+d_EU_GHG_TIMER$Scenario <- factor(d_EU_GHG_TIMER$Scenario, levels=c("No new policies (v2015)", "No new policies (v3_2)"))
+
+d_EU_GHG_hist$Region <- factor(d_EU_GHG_hist$Region, levels=c("Europe", "Europe excl. EU28", "EU28"))
+d_EU_GHG_hist$Sector <- factor(d_EU_GHG_hist$Sector, levels=sector_order)
+d_EU_GHG_TIMER$Sector <- factor(d_EU_GHG_TIMER$Sector, levels=sector_order)
+
+g_GHG <- ggplot() +
+         geom_bar(data=d_EU_GHG_hist, aes(x=Year, y=Value, fill=Region), stat="identity") +
+         geom_line(data=d_EU_GHG_TIMER, aes(x=Year, y=Value, linetype=Scenario)) +
+         facet_wrap(~Sector, scales='free_y') +
+         scale_fill_brewer(name="Historical data", palette="Set1") +
+         scale_linetype(name="IMAGE Scenario") +
+         ylab(d_EU_GHG_hist$Unit[1]) +
+         theme_bw() +
+         theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+g_GHG   
+
+
+```
+
+# Energy efficiency directive
+
+```{r plot Energy efficiency, echo=FALSE}
+MToeToTJ =4.1868*10^(4)
+
+# IEA Energy Balance
+EU_hist_EE <- read.table("../data/IEA_IAMregions.csv", sep=";", header=TRUE) %>% as.data.frame()
+#EU_hist_EE <- filter(EU_hist_EE, region=="EU", variable %in%c('Final Energy', 'Primary Energy')) %>%
+#              mutate(value=10^3*value, source="IEA")
+EU_hist_EE <- filter(EU_hist_EE, region%in%c("WEU","CEU"), variable %in%c('Final Energy', 'Primary Energy')) %>%
+              mutate(value=10^3*value, source="History Europe (IEA)") %>% 
+              spread(key=region, value=value) %>%
+              mutate(value=WEU+CEU, region="Europe") %>%
+              select(-WEU, -CEU)
+
+# EU Reference scenario
+# https://ec.europa.eu/energy/data-analysis/energy-modelling/eu-reference-scenario-2016_en?redir=1
+EU_hist_Energy_PRIMES <- read_excel(path="../data/AppendixRefSce.xls", sheet="EU28-B", range="A30:L31", col_names=FALSE) %>% as.data.frame()
+colnames(EU_hist_Energy_PRIMES) <- c('variable', '2000', '2005','2010','2015','2020','2025','2030','2035','2040','2045','2050') 
+EU_hist_Energy_PRIMES <- filter(EU_hist_Energy_PRIMES, variable%in%c('Primary energy consumption', 'Final Energy Demand')) 
+EU_hist_Energy_PRIMES <- gather(EU_hist_Energy_PRIMES, 2:ncol(EU_hist_Energy_PRIMES), key=year, value=value) %>%
+                         mutate(unit="MToe", source="EU reference scenario 2016\n (PRIMES)") %>%
+                         mutate(variable=replace(variable, variable=="Primary energy consumption", "Primary Energy")) %>%
+                         mutate(variable=replace(variable, variable=="Final Energy Demand", "Final Energy")) %>%
+                         mutate(value=MToeToTJ*value*10^(-6), unit="PJ", source="EU28 Reference scenario 2016")
+EU_hist_Energy_PRIMES$year <- as.numeric(EU_hist_Energy_PRIMES$year)
+
+
+# Absolute targets (in PJ)
+EU_EE_TPES_Target_abs_year = c(2020,2030)
+t1 = MToeToTJ*1483*10^(3)*10^(-6)
+t2 = MToeToTJ*1273*10^3*10^(-6)
+EU_EE_TPES_Target_abs_value = c(t1,t2)
+EU_EE_TPES_Target_abs <- data.frame(EU_EE_TPES_Target_abs_year, EU_EE_TPES_Target_abs_value) %>% 
+                     rename(year=EU_EE_TPES_Target_abs_year, value=EU_EE_TPES_Target_abs_value) %>%
+                     mutate(variable="Primary Energy")
+EU_EE_FE_Target_abs_year = c(2020,2030)
+t1 = MToeToTJ*1086*10^(3)*10^(-6)
+t2 = MToeToTJ*956*10^3*10^(-6)
+EU_EE_FE_Target_abs_value = c(t1,t2)
+EU_EE_FE_Target_abs <- data.frame(EU_EE_FE_Target_abs_year, EU_EE_FE_Target_abs_value) %>% 
+                       rename(year=EU_EE_FE_Target_abs_year, value=EU_EE_FE_Target_abs_value) %>%
+                       mutate(variable="Final Energy")
+EU_EE_Target_abs <- rbind(EU_EE_TPES_Target_abs, EU_EE_FE_Target_abs) %>% mutate(unit="PJ", type="Absolute")
+
+v2010_TPES=filter(EU_hist_Energy_PRIMES, variable=="Primary Energy", year==2010)$value
+v2010_FE=filter(EU_hist_Energy_PRIMES, variable=="Final Energy", year==2010)$value 
+Perc_Target <- filter(EU_hist_Energy_PRIMES, year%in%c(2020, 2030)) %>% mutate(v2010=ifelse(variable=="Primary Energy",v2010_TPES, v2010_FE)) %>%
+               mutate(reduction=100*(value/v2010-1)) %>%
+               select(-value, -v2010) %>%
+               rename(value=reduction)
+
+# TIMER scenarios
+EU_TIMER_EE_TPES_NoPolicy <- filter(NoPolicy$TPES, region=="EU", year>=2000, year<=2030, energy_carrier=="Total") %>% mutate(Policy="NoPolicy (v2015)")
+EU_TIMER_EE_TPES_NoPolicy_3_2 <- filter(NoPolicy_3_2$TPES, region=="EU", year>=2000, year<=2030, energy_carrier=="Total") %>% mutate(Policy="NoPolicy (v3_2)")
+EU_TIMER_EE_TPES_NPi <- filter(NPi$TPES, region=="EU", year>=2000, year<=2030, energy_carrier=="Total") %>% mutate(Policy="NPi")
+EU_TIMER_EE_TPES <- rbind(EU_TIMER_EE_TPES_NoPolicy, EU_TIMER_EE_TPES_NPi) %>% rbind(EU_TIMER_EE_TPES_NoPolicy_3_2) %>% select(-energy_carrier) %>% mutate(variable="Primary Energy")
+
+# TIMER scenarios
+EU_TIMER_EE_FE_NoPolicy <- filter(NoPolicy$FinalEnergy, region=="EU", year>=2000, year<=2030, energy_carrier=="Total", sector=="Total") %>% mutate(Policy="NoPolicy (v2015)")
+EU_TIMER_EE_FE_NoPolicy_3_2 <- filter(NoPolicy_3_2$FinalEnergy, region=="EU", year>=2000, year<=2030, energy_carrier=="Total", sector=="Total") %>% mutate(Policy="NoPolicy (v3_2)")
+EU_TIMER_EE_FE_NPi <- filter(NPi$FinalEnergy, region=="EU", year>=2000, year<=2030, energy_carrier=="Total", sector=="Total") %>% mutate(Policy="NPi")
+EU_TIMER_EE_FE <- rbind(EU_TIMER_EE_FE_NoPolicy, EU_TIMER_EE_FE_NPi) %>% rbind(EU_TIMER_EE_FE_NoPolicy_3_2) %>% select(-energy_carrier, -sector) %>% mutate(variable="Final Energy")
+EU_TIMER_EE <- rbind(EU_TIMER_EE_TPES,EU_TIMER_EE_FE) %>% mutate(source="TIMER")
+
+# Tercentage target (%)
+EU_EE_Target_perc <- filter(EU_TIMER_EE, year==2010, Policy=="NoPolicy (v2015)") %>% 
+                            inner_join(Perc_Target, by=c('variable')) %>%
+                            mutate(target=value.x*(1+value.y/100)) %>%
+                            select(-year.x, -value.x, -Policy, -source.x, -source.y, -value.y, -unit.y, -region) %>%
+                            rename(unit=unit.x, year=year.y, value=target) %>%
+                            mutate(type="Percentage")
+EU_EE_Target <- rbind(EU_EE_Target_abs, EU_EE_Target_perc)
+
+# TIMER scenarios only in target years
+EU_EE_target_years <- filter(EU_TIMER_EE, year==2020 | year==2030)
+
+g_EE_EU <- ggplot() + 
+  geom_line(data=EU_TIMER_EE, aes(x=year, y=value, colour=Policy)) + 
+  geom_line(data=filter(EU_hist_EE), aes(x=period, y=value, linetype=source)) +
+  geom_line(data=filter(EU_hist_Energy_PRIMES), aes(x=year, y=value, linetype=source)) +
+  geom_point(data=EU_EE_target_years, aes(x=year, y=value, colour=Policy), size=2) + 
+  #geom_point(data=EU_EE_Target, aes(x=year, y=value, size=year, shape=type), colour="brown4") +
+  geom_point(data=EU_EE_Target, aes(x=year, y=value, shape=interaction(year, type)), colour="brown4") +
+  facet_wrap(~variable) +
+  theme_bw() +
+  scale_colour_manual(name="Scenario", values=c("History"="black", "NoPolicy (v2015)"="darkgreen", "NoPolicy (v3_2)"="chartreuse", "NPi"="blue"), 
+                      labels=c("History"="History EEA", "NoPolicy"="No policy baseline (v2015)", "NPi"="Current policies (v3_2)")) +
+  scale_shape((name="Energy efficiency goal")) +
+  scale_linetype(name="Source") +
+  ylim(0, NA) +
+  ylab(EU_TIMER_EE$unit[1]) +
+  ggtitle("Energy efficiency") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  guides(fill=guide_legend(reverse=TRUE))
+
+g_EE_EU
+```
+
+* TIMER includes other European countries beside those from the EU
+* The Roadmap includes all EU28 countries
+* The Roadmap seperately reports Energy Branch energy use
+* The IEA data is calculated based on the TIMER regions WEU+CEU and EU
+
+* Roadmap gross inland consumption including 'energy branch consumption' is high, assuming it is included in TPES number from IEA and TIMER
+* Acccording to Eurostat/IEA energy statistics manual
+Eurostat's  “Gross  inlandconsumption”  is  essentially  the  consumption  of  net  externally  provided  supply.
+It could  be  a  negative  figure  if  exports  were  sufficiently  large. 
+To  reproduce  the  IEA“Domestic supply” figure, it is necessary to add the refinery production of gas/dieseloil within the transformation output part of the balance
+---> CONCLUSION, definition differences, but not exatly sure what exactly
+https://ec.europa.eu/eurostat/statistics-explained/index.php/Glossary:Gross_inland_energy_consumption
+Trends to 2030: Energy branch consumption: "Energy consumed in refineries, electricity and steam generation and in other transformation processes."
+
+
+# Renewable energy directive
+
+```{r plot Renewable energy, echo=FALSE}
+#https://www.eea.europa.eu/data-and-maps/data/approximated-estimates-for-the-share-1
+EU_hist_REN_final <- read.table("../data/nrg_ind_ren_1_Data_final.csv", sep=",", header=TRUE) %>% as.data.frame()
+EU_hist_REN_final <- filter(EU_hist_REN_final, GEO=="European Union - 27 countries (from 2020)") %>% mutate(Source="EEA")
+
+# Targets
+EU_REN_final_Target_year = c(2020,2030)
+EU_REN_final_Target_value = c(20,32)
+EU_REN_final_Target <- data.frame(EU_REN_final_Target_year, EU_REN_final_Target_value) %>% 
+  rename(year=EU_REN_final_Target_year, value=EU_REN_final_Target_value)
+#pander(EU_REN_final_target)
+
+# TIMER scenarios
+EU_TIMER_REN_final_NoPolicy <- filter(NoPolicyi$RENfinalenergyshare, region=="EU", year>=2000, year<=2030) %>% mutate(Policy="NoPolicy (v2015)")
+EU_TIMER_REN_final_NoPolicy_3_2 <- filter(NoPolicy_3_2i$RENfinalenergyshare, region=="EU", year>=2000, year<=2030) %>% mutate(Policy="NoPolicy (v3_2)")
+EU_TIMER_REN_final_NPi <- filter(NPii$RENfinalenergyshare, region=="EU", year>=2000, year<=2030) %>% mutate(Policy="NPi")
+EU_TIMER_REN_final <- rbind(EU_TIMER_REN_final_NoPolicy, EU_TIMER_REN_final_NPi) %>% rbind(EU_TIMER_REN_final_NoPolicy_3_2) %>% select(-region, -unit) %>% mutate(Source="TIMER model")
+
+# add history as scenario
+d_tmp <- select(EU_hist_REN_final, TIME, Value, GEO) %>% rename(year=TIME, Source=GEO, value=Value) %>% mutate(Policy="History")
+EU_TIMER_REN_final <- rbind(EU_TIMER_REN_final, d_tmp)
+
+# TIMER scenarios only in target years
+EU_REN_final_target_years <- filter(EU_TIMER_REN_final, year==2020 | year==2030)
+
+g_REN_final_EU <- ggplot() + 
+  geom_line(data=EU_TIMER_REN_final, aes(x=year, y=value, colour=Policy)) + 
+  geom_point(data=EU_REN_final_target_years, aes(x=year, y=value, colour=Policy), size=2) + 
+  #geom_point(data=filter(EU_hist_REN_final, TIME<=2018), aes(x=TIME, y=Value, linetype=Source)) +
+  geom_point(data=EU_REN_final_Target, aes(x=year, y=value, size=year), colour="brown4") +
+  theme_bw() +
+  scale_colour_manual(name="Scenario", values=c("History"="black", "NoPolicy (v2015)"="darkgreen", "NoPolicy (v3_2)"="chartreuse", "NPi"="blue"), 
+                      labels=c("History"="History EU28 (EEA)", "NoPolicy"="No policy baseline (v2015)", "NPi"="Current policies")) +
+  scale_size_continuous(name="Renewable energy target", labels=EU_REN_final_Target_year, breaks=EU_REN_final_Target_year, range = c(2,3)) +
+  ylim(0, 40) +
+  ylab(EU_TIMER_REN_final$unit[1]) +
+  ggtitle("Renewable energy") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  guides(fill=guide_legend(reverse=TRUE))
+g_REN_final_EU 
+
+```
+
+# Emission Trading System
+
+```{r plot ETS, echo=FALSE, warning=FALSE}
+# https://ec.europa.eu/energy/data-analysis/energy-modelling/eu-reference-scenario-2016_en?redir=1
+#EU_hist_ETS <- read_excel(path="../data/AppendixRefSce.xls", sheets="EU28-B") #%>% as.data.frame()
+EU_hist_ETS_PRIMES <- read_excel(path="../data/AppendixRefSce.xls", sheet="EU28-B", range="A56:L58", col_names=FALSE) %>% as.data.frame()
+colnames(EU_hist_ETS_PRIMES) <- c('variable', '2000', '2005','2010','2015','2020','2025','2030','2035','2040','2045','2050') 
+EU_hist_ETS_PRIMES <- filter(EU_hist_ETS_PRIMES, variable=="of which ETS sectors (2013 scope) GHG emissions") 
+EU_hist_ETS_PRIMES$`variable` <- NULL
+EU_hist_ETS_PRIMES$`2000` <- NULL
+EU_hist_ETS_PRIMES <- gather(EU_hist_ETS_PRIMES, 1:ncol(EU_hist_ETS_PRIMES), key=year, value=value) %>%
+                      mutate(unit="MtCO2eq", source="EU28 reference scenario 2016\n (PRIMES)")
+
+#https://www.eea.europa.eu/data-and-maps/dashboards/emissions-trading-viewer-1
+EU_hist_ETS_Registry <- read.table('../data/ETS_Database_v34.csv', sep="\t", header=TRUE)
+EU_hist_ETS_Registry <- filter(EU_hist_ETS_Registry, `ETS.information`%in%c("2. Verified emissions", "Estimate to reflect current ETS scope for allowances and emissions"),
+                                                      `main.activity.sector.name`=="20-99 All stationary installations") %>%
+                        group_by(year) %>%
+                        summarise(value=sum(value)) %>%
+                        filter(!str_detect(year, "Total")) %>%
+                        mutate(value=replace(value, value>0, value/10^6)) %>%
+                        mutate(unit="MtCO2eq", source="ETS Registry")
+EU_hist_ETS <- rbind(EU_hist_ETS_PRIMES, EU_hist_ETS_Registry)
+EU_hist_ETS$year <- as.integer(EU_hist_ETS$year)
+
+# Targets (cap on GHG emissions)
+# https://ec.europa.eu/clima/policies/ets/cap_en
+
+EU_ETS_Target <- read.table('../data/EU_ETS_cap.csv', sep=";", header=TRUE)
+EU_ETS_Target <- mutate(EU_ETS_Target, value=allowances/10^6, unit="MtCO2eq") %>% select(-allowances)
+
+# 80% of energy supply and industry sector is covered by ETS
+EU_ETS_Target_TIMER_year = c(2020,2030)
+perc_NoPolicy_2020 <- filter(NoPolicyi$EMIS_ETS, region=="EU", year%in%c(2005, 2020)) %>% 
+                      spread(key='year', value=value) %>%
+                      mutate(perc = `2020`/`2005`-1)
+perc_NoPolicy_2020 <- perc_NoPolicy_2020$perc
+perc_NoPolicy_2030 <- filter(NoPolicyi$EMIS_ETS, region=="EU", year%in%c(2005, 2030)) %>% 
+                      spread(key='year', value=value) %>%
+                      mutate(perc = `2030`/`2005`-1)
+perc_NoPolicy_2030 <- perc_NoPolicy_2030$perc
+NoPolicy_2005 <- filter(NoPolicyi$EMIS_ETS, region=="EU", year%in%c(2005))$value
+EU_ETS_Target_2020 = 0.8*NoPolicy_2005*(1-0.21) + 0.2*NoPolicy_2005*(1+perc_NoPolicy_2020)
+EU_ETS_Target_2030 = 0.8*NoPolicy_2005*(1-0.43) + 0.2*NoPolicy_2005*(1+perc_NoPolicy_2030)
+EU_ETS_Target_TIMER_value = c(EU_ETS_Target_2020,EU_ETS_Target_2030) 
+EU_ETS_Target_TIMER <- data.frame(EU_ETS_Target_TIMER_year, EU_ETS_Target_TIMER_value) %>% 
+                       rename(year=EU_ETS_Target_TIMER_year, value=EU_ETS_Target_TIMER_value)
+#pander(EU_REN_final_target)
+
+# TIMER scenarios
+EU_ETS_TIMER_NoPolicy <- filter(NoPolicyi$EMIS_ETS, region=="EU", year>=2000, year<=2030) %>% mutate(Policy="NoPolicy")
+EU_ETS_TIMER_NPi <- filter(NPii$EMIS_ETS, region=="EU", year>=2000, year<=2030) %>% mutate(Policy="NPi")
+EU_ETS_TIMER <- rbind(EU_ETS_TIMER_NoPolicy, EU_ETS_TIMER_NPi) #%>% mutate(value=100*value)
+
+WEU_CEU_TIMER_ETS_NoPolicy <- filter(NoPolicyi$EMIS_ETS, region%in%c("WEU", "CEU"), year>=2000, year<=2030) %>% mutate(Policy="NoPolicy")
+WEU_CEU_TIMER_ETS_NPi <- filter(NPii$EMIS_ETS, region%in%c("WEU", "CEU"), year>=2000, year<=2030) %>% mutate(Policy="NPi")
+WEU_CEU_TIMER_ETS <- rbind(WEU_CEU_TIMER_ETS_NoPolicy, WEU_CEU_TIMER_ETS_NPi) #%>% mutate(value=100*value)
+
+# TIMER scenarios only in target years
+EU_ETS_target_years <- filter(EU_ETS_TIMER, year==2020 | year==2030)
+
+grob <- grobTree(textGrob("ETS covers 80% of energy supply\n and industry emissions", x=0.4, y=0.35, hjust=0,
+                          gp=gpar(col="black", fontsize=10, fontface="italic")))
+
+g_EU_ETS <- ggplot() + 
+  geom_line(data=EU_ETS_TIMER, aes(x=year, y=value, colour=Policy)) + 
+  geom_point(data=EU_ETS_target_years, aes(x=year, y=value, colour=Policy), size=2) + 
+  geom_line(data=filter(EU_hist_ETS, year<=2018), aes(x=year, y=value, linetype=source)) +
+  geom_point(data=EU_ETS_Target, aes(x=year, y=value, size=year), colour="darkyellow") +
+  geom_point(data=EU_ETS_Target_TIMER, aes(x=year, y=value, size=year), colour="brown4") +
+  #geom_text(x=0.6, y=0.5, label="ETS covers 80% of energy supply\n and industry emissions") +
+  annotation_custom(grob) +
+  theme_bw() +
+  scale_colour_manual(name="Scenario", values=c("History"="black", "NoPolicy"="darkgreen", "NPi"="blue"), 
+                      labels=c("History"="History EEA", "NoPolicy"="No policy baseline", "NPi"="Current policies")) +
+  scale_linetype(name="Source") +
+  scale_size_continuous(name="ETS target", labels=EU_ETS_Target_TIMER_year, breaks=EU_ETS_Target_TIMER_year, range = c(2,3)) +
+  ylab(EU_ETS_TIMER$unit[1]) +
+  ylim(0, 3500) +
+  ggtitle("Emission trading system") +
+  theme(legend.title=element_text(size=8), legend.text=element_text(size=6), legend.spacing.y = unit(0.1, 'cm')) +
+  guides(fill=guide_legend(reverse=TRUE))
+g_EU_CEU_ETS <- ggplot(data=WEU_CEU_TIMER_ETS) + geom_line(aes(x=year, y=value, colour=Policy)) +
+  facet_wrap(~region, nrow=2) +
+  scale_colour_manual(values=c("NoPolicy"="darkgreen", "NPi"="blue"), 
+                      labels=c("NoPolicy"="No policy baseline", "NPi"="Current policies"),
+                      guide=FALSE) +
+  #scale_colour_discrete(guide=FALSE) +
+  ylab(WEU_CEU_TIMER_ETS$unit[1]) +
+  ylim(0, 3500) +
+  theme_bw()
+
+g_EU_ETS #/ g_EU_CEU_ETS
+```
+
+
+# Transport sector
+
+## Renewable Energy Directive - renewable transport
+
+```{r plot renewable transport share cars, echo=FALSE, eval=TRUE}
+
+renewable_energy_transport_hist <- read.table("../data/nrg_ind_ren_1_Data_transport.csv", sep=",", header=TRUE)
+renewable_energy_transport_hist_EU <- filter(renewable_energy_transport_hist, GEO=='European Union - 28 countries (2013-2020)')
+
+# Policy target
+EU_Bio_Road_Transport_Target_year = c(2020,2030)
+EU_Bio_Road_Transport_value = c(10,14)
+EU_Bio_Road_Transport_Target <- data.frame(EU_Bio_Road_Transport_Target_year, EU_Bio_Road_Transport_value) %>% 
+                               rename(year=EU_Bio_Road_Transport_Target_year, value=EU_Bio_Road_Transport_value)
+
+# travel
+trvl_bio_NoPolicy <- filter(NoPolicyi$BlendingShareBio_energy_trvl_alt, travel_mode=="Road", region=="EU", year>=2010, year<=2030) %>% mutate(Variable="Bio", Policy="NoPolicy") %>% 
+                     mutate(value, value=replace(value, year>=1971, 100*value)) %>%
+                     select(-travel_mode)
+trvl_ren_NoPolicy <- filter(NoPolicyi$RenTransportShare_Road_trvl, region=="EU", year>=2010, year<=2030) %>% mutate(Variable="Renewable", Policy="NoPolicy")
+trvl_bio_NPi <- filter(NPii$BlendingShareBio_energy_trvl_alt, travel_mode=="Road", region=="EU", year>=2010, year<=2030) %>% mutate(Variable="Bio", Policy="NPi") %>% 
+                mutate(value, value=replace(value, year>=1971, 100*value) )%>%
+                select(-travel_mode)
+trvl_ren_NPi <- filter(NPii$RenTransportShare_Road_trvl, region=="EU", year>=2010, year<=2030) %>% mutate(Variable="Renewable", Policy="NPi")
+d_travel <- rbind(trvl_bio_NoPolicy, trvl_ren_NoPolicy) %>% rbind(trvl_bio_NPi) %>% rbind(trvl_ren_NPi)
+
+# freight
+frgt_bio_NoPolicy <- filter(NoPolicyi$BlendingShareBio_energy_frgt_alt, travel_mode=="Road", region=="EU", year>=2010, year<=2030) %>% mutate(Variable="Bio", Policy="NoPolicy") %>% 
+                     mutate(value, value=replace(value, year>=1971, 100*value)) %>%
+                     select(-travel_mode)
+frgt_ren_NoPolicy <- filter(NoPolicyi$RenTransportShare_Road_frgt, region=="EU", year>=2010, year<=2030) %>% mutate(Variable="Renewable", Policy="NoPolicy")
+frgt_bio_NPi <- filter(NPii$BlendingShareBio_energy_frgt_alt, travel_mode=="Road", region=="EU", year>=2010, year<=2030) %>% mutate(Variable="Bio", Policy="NPi") %>% 
+                      mutate(value, value=replace(value, year>=1971, 100*value) )%>%
+                      select(-travel_mode)
+frgt_ren_NPi <- filter(NPii$RenTransportShare_Road_frgt, region=="EU", year>=2010, year<=2030) %>% mutate(Variable="Renewable", Policy="NPi")
+d_freight <- rbind(frgt_bio_NoPolicy, frgt_ren_NoPolicy) %>% rbind(frgt_bio_NPi) %>% rbind(frgt_ren_NPi)
+
+# total transport
+trp_bio_NoPolicy <- filter(NoPolicyi$BlendingShareBio_energy_alt, travel_mode=="Road", region=="EU", year>=2010, year<=2030) %>%
+                    mutate(Variable="Bio", Policy="NoPolicy") %>% 
+                    mutate(value, value=replace(value, year>=1971, 100*value)) %>% 
+                    select(-travel_mode) 
+trp_ren_NoPolicy <- filter(NoPolicyi$RenTransportShare_Road, travel_mode=="Total", type=="Total", region=="EU", year>=2010, year<=2030) %>% mutate(Variable="Renewable", Policy="NoPolicy") %>% 
+                    select(-travel_mode, -type) 
+trp_bio_NPi <- filter(NPii$BlendingShareBio_energy_alt, travel_mode=="Road", region=="EU", year>=2010, year<=2030) %>% mutate(Variable="Bio", Policy="NPi") %>% 
+               mutate(value, value=replace(value, year>=1971, 100*value) )%>%
+               select(-travel_mode)
+trp_ren_NPi <- filter(NPii$RenTransportShare_Road, travel_mode=="Total", type=="Total", region=="EU", year>=2010, year<=2030) %>% mutate(Variable="Renewable", Policy="NPi")%>% 
+               select(-travel_mode, -type) 
+d_trp <- rbind(trp_bio_NoPolicy, trp_ren_NoPolicy) %>% rbind(trp_bio_NPi) %>% rbind(trp_ren_NPi)
+
+
+g_ren_travel <- ggplot() + 
+                     geom_line(data=d_travel, aes(x=year, y=value, linetype=Variable, colour=Policy)) +
+                     geom_point(data=renewable_energy_transport_hist_EU, aes(x=TIME, y=Value, colour="History")) +
+                     scale_colour_manual(name="Scenario", values=c("History"="black", "NoPolicy"="darkgreen", "NPi"="blue"), 
+                                         labels=c("History"="History Eurostat", "NoPolicy"="No policy baseline", "NPi"="Current policies"), guide=FALSE) +
+                     scale_linetype(guide=FALSE) +
+                     ylim(0,35) +
+                     ggtitle('Travel') +
+                     theme_bw() + 
+                     theme(axis.text.x = element_text(angle = 90, hjust = 1))
+g_ren_freight <- ggplot() + 
+                     geom_line(data=d_freight, aes(x=year, y=value, linetype=Variable, colour=Policy)) +
+                     geom_point(data=renewable_energy_transport_hist_EU, aes(x=TIME, y=Value, colour="History")) +
+                     scale_colour_manual(name="Scenario", values=c("History"="black", "NoPolicy"="darkgreen", "NPi"="blue"), 
+                                         labels=c("History"="History Eurostat", "NoPolicy"="No policy baseline", "NPi"="Current policies"), guide=FALSE) +
+                     scale_linetype(guide=FALSE) +
+                     ylim(0,35) +
+                     ggtitle('Freight') +                   
+                     theme_bw() +
+                     theme(axis.text.x = element_text(angle = 90, hjust = 1))
+g_ren_trp <- ggplot() + 
+                     geom_line(data=d_trp, aes(x=year, y=value, linetype=Variable, colour=Policy)) +
+                     geom_point(data=renewable_energy_transport_hist_EU, aes(x=TIME, y=Value, colour="History")) +
+                     geom_point(data=EU_Bio_Road_Transport_Target, aes(x=year, y=value, size=year), colour="brown4") +
+                     scale_colour_manual(name="Scenario", values=c("History"="black", "NoPolicy"="darkgreen", "NPi"="blue"), 
+                                         labels=c("History"="History EU28 (Eurostat)", "NoPolicy"="No policy baseline", "NPi"="Current policies")) +
+                     scale_size_continuous(name="Biofuel standard", labels=EU_Bio_Road_Transport_Target_year, breaks=EU_Bio_Road_Transport_Target_year, range = c(2,3)) +
+                     ylim(0,35) +
+                     ggtitle('Total transport') +                   
+                     theme_bw() +
+                     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                     theme(legend.title=element_text(size=6), legend.text=element_text(size=6), legend.spacing.y = unit(0.1, "mm"), legend.key.height=unit(0.5,"line"))
+g_ren_trp / (g_ren_travel + g_ren_freight)
+```
+
+Greenhouse gas emissions per mode
+
+```{r plot GHG emissions in NoPolicy scenariotransport sector, echo=FALSE}
+d_travel <- filter(NoPolicy$TransportTravelCO2Emissions, !travel_mode%in%c("Walking", "Biking", "-", "Total"), region=="World", year>=2010, year<=2030) %>% mutate(sub_sector="Travel")
+d_freight <- filter(NoPolicy$TransportFreightCO2Emissions, !travel_mode%in%c("-", "Total"), region=="World", year>=2010, year<=2030) %>% mutate(sub_sector="Freigth")
+d_transport <- rbind(d_travel, d_freight)
+#pander(d_transport)
+
+colourCount = length(unique(d_transport$travel_mode))
+getPalette = colorRampPalette(brewer.pal(5, "Set2"))
+g_transport <- ggplot(data=d_transport, aes(x=year, y=value, fill=travel_mode)) +
+               geom_area(stat="identity") +
+               ylab(d_transport$unit) +
+               #scale_fill_brewer(name="Travel mode", palette="Paired", values = getPalette(13)) +
+               scale_fill_manual(name="Travel mode", values = getPalette(colourCount)) +
+               guides(fill=guide_legend(ncol=2)) +
+               theme_bw() +
+               theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+g_transport
+
+```
+
+
+Policies modelled in TIMER
+* CO2 performance standards for **cars**, including electric share
+* Renewable target for **cars** (biofuels, electric cars)
+* CO2 performance standards for heavy trucks
+
+Transpor modes not included
+* Policies for medium-trucks
+* Policicies for aviation (part of ETS), shipping (IMO standards)
+* Policies that impact train (train, high-speed train, freight train)
+
+Transport policies not included
+* Fuel quality standard
+* CO2 performance standards, will be implemetned after 2022 review
+
+## Reducing CO2 emissions from vehicles
+
+1. Light-duty vehicle
+ + Cars
+ + Vans
+3. Heavy-duty vehicles
+
+## CO2 performance standards for cars
+
+**Policy:** CO2 performance standards for cars
+
+**Indicator:** gCO2/km for new car registrations
+pander(EU_CO2_cars_target)
+
+**Assumptions:** 
+* CO2 intensity fuels is based on the assumption that there is a fixed ratio between gasoline and diesel (gasoline=43%), and this intensity also applies to other fuels.
+** CO2 intensity gasoline is 2.4 gCO2/l, and CO2-intensity diesel is 2.7 gCO2/l
+* Energy intensity fuel is 34.841 MJ/l
+* load cars is 1.6 persons
+
+**Methods:**
+* Energy use cars in TIMER is described in terms of MJ/pkm. CO2 intensity cars is calculated by translating this to CO2/km.
+* CO2 performance standards are implemented in TIMER by increasing the energy tax on oil and gas to a level that results in achieving the co2 performance standards for new cars.
+
+```{r calculate CO2 performance cars, echo=FALSE}
+
+# history
+# https://www.eea.europa.eu/data-and-maps/daviz/average-emissions-for-new-cars-5#tab-chart_1
+EU_hist_cars_CO2_pkm_new <- read.table("../data/average-emissions-for-new-cars-5.csv", sep=";", header=TRUE) %>% as.data.frame()
+
+# Targets
+EU_CO2_cars_Target_year = c(2021,2025,2030)
+EU_CO2_cars_Target_value = c(95,81,59)
+EU_CO2_cars_target <- data.frame(EU_CO2_cars_Target_year, EU_CO2_cars_Target_value) %>% 
+                      rename(year=EU_CO2_cars_Target_year, value=EU_CO2_cars_Target_value)
+
+
+# TIMER scenarios
+EU_Transport_cars_gCO2_km_NoPolicy <- filter(NoPolicyi$CO2_intensity_fleet_new_cars_tailpipe, carrier=="total", region=="EU", year>=2000, year<=2030) %>% mutate(Policy="NoPolicy")
+EU_Transport_cars_gCO2_km_NPi <- filter(NPii$CO2_intensity_fleet_new_cars_tailpipe, carrier=="total", region=="EU", year>=2000, year<=2030) %>% mutate(Policy="NPi")
+EU_Transport_cars_gCO2_km <- rbind(EU_Transport_cars_gCO2_km_NoPolicy, EU_Transport_cars_gCO2_km_NPi) %>% select(-carrier) #%>%
+
+WEU_CEU_Transport_cars_gCO2_km_NoPolicy <- filter(NoPolicyi$CO2_intensity_fleet_new_cars_tailpipe, carrier=="total", region%in%c("WEU", "CEU"), year>=2000, year<=2030) %>% mutate(Policy="NoPolicy")
+WEU_CEU_Transport_cars_gCO2_km_NPi <- filter(NPii$CO2_intensity_fleet_new_cars_tailpipe, carrier=="total", region%in%c("WEU", "CEU"), year>=2000, year<=2030) %>% mutate(Policy="NPi")
+WEU_CEU_Transport_cars_gCO2_km <- rbind(WEU_CEU_Transport_cars_gCO2_km_NoPolicy, WEU_CEU_Transport_cars_gCO2_km_NPi) %>% select(-carrier) #%>%
+
+# TIMER scenarios only in target years
+EU_Transport_cars_target_years_gCO2_km <- filter(EU_Transport_cars_gCO2_km, year==2021 | year==2025 | year==2030)
+
+
+# Efficiency for individual cars in TIMER --> translated to gCO2/km
+EU_Transport_cars_efficiency_TIMER_MJ_pkm <- filter(NoPolicy$EfficiencyTravel, region%in%c('WEU', 'CEU'), mode=="Car", year>=2000, year<=2030) %>% 
+                                            cbind(as.data.frame(car_type_included)) %>%
+                                            filter(car_type_included==TRUE)
+EU_Transport_cars_efficiency_TIMER_km_l <- EU_Transport_cars_efficiency_TIMER_MJ_pkm %>%
+                                           mutate(value=replace(value, value >0, energy_intensity_fuel/(value*Load_car))) %>%
+                                           mutate(unit=replace(unit, mode=="Car", "km/l"))
+EU_Transport_cars_efficiency_TIMER_gCO2_km <- EU_Transport_cars_efficiency_TIMER_km_l %>%
+                                              mutate(value=replace(value, value >0, co2_intensity_fuel*10^3/value)) %>%
+                                              mutate(unit=replace(unit, mode=="Car", "gCO2/km"))
+
+```
+
+```{r plot CO2 performance cars, echo=FALSE}
+g_co2_new_cars <- ggplot() + 
+     geom_line(data=EU_Transport_cars_gCO2_km, aes(x=year, y=value, colour=Policy)) + 
+     geom_point(data=EU_Transport_cars_target_years_gCO2_km, aes(x=year, y=value, colour=Policy), size=2) + 
+     geom_point(data=filter(EU_hist_cars_CO2_pkm_new, year.year<=2018), aes(x=year.year, y=Average.CO2.emissions.from.new.passenger.cars.number, colour="History")) +
+     geom_point(data=filter(EU_Transport_cars_efficiency_TIMER_gCO2_km, region=="WEU", travel_type%in%c("ICE2000", "ICE Diesel Oil")), aes(x=year, y=value, shape=travel_type), alpha=0.5, size=1,                  colour="cornflowerblue") +
+     geom_point(data=EU_CO2_cars_target, aes(x=year, y=value, size=year), colour="brown4") +
+     theme_bw() +
+     #scale_colour_brewer(palette="Set1", name="TIMER pathway in scenario") +
+     scale_colour_manual(name="Scenario", values=c("History"="black", "NoPolicy"="darkgreen", "NPi"="blue"), 
+                                          labels=c("History"="History EU28 (EEA)", "NoPolicy"="No policy baseline", "NPi"="Current policies")) +
+     scale_shape_discrete(name="TIMER Car type") +
+     scale_size_continuous(name="CO2 performance standard", labels=EU_CO2_cars_Target_year, breaks=EU_CO2_cars_Target_year, range = c(2,3)) +
+     ylim(0, NA) +
+     ylab(EU_Transport_cars_gCO2_km$unit) +
+     ggtitle("EU fuel performance new cars") +
+     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+     guides(fill=guide_legend(reverse=TRUE))
+g_co2_new_cars_WEU_CEU <- ggplot(data=WEU_CEU_Transport_cars_gCO2_km) + geom_line(aes(x=year, y=value, colour=Policy)) +
+                          facet_wrap(~region, nrow=2) +
+                          scale_colour_manual(name="Scenario", values=c("NoPolicy"="darkgreen", "NPi"="blue"), 
+                                          labels=c("NoPolicy"="No policy baseline", "NPi"="Current policies")) +
+                          theme_bw() +
+                          theme(axis.text.x = element_text(angle = 90, hjust = 1))
+                            
+g_co2_new_cars #+ g_co2_new_cars_WEU_CEU
+```
+
+```{r plot share electric cars, echo=FALSE}
+
+# history
+#https://www.eea.europa.eu/data-and-maps/daviz/new-electric-vehicles-in-eu-28#tab-chart_1
+EU_hist_cars_electric_new <- read.table("../data/new-electric-vehicles-in-eu-28.csv", sep=",", header=TRUE) %>% as.data.frame()
+
+# Targets
+EU_elec_cars_Target_year = c(2025,2030)
+EU_elec_cars_Target_value = c(15,35)
+EU_elec_cars_target <- data.frame(EU_elec_cars_Target_year, EU_elec_cars_Target_value) %>% 
+                       rename(year=EU_elec_cars_Target_year, value=EU_elec_cars_Target_value)
+pander(EU_CO2_cars_target)
+
+# TIMER scenarios
+EU_Transport_cars_elec_share_NoPolicy <- filter(NoPolicy$ElectricShare_new_cars, region=="EU", year>=2000, year<=2030) %>% mutate(Policy="NoPolicy")
+EU_Transport_cars_elec_share_NPi <- filter(NPi$ElectricShare_new_cars, region=="EU", year>=2000, year<=2030) %>% mutate(Policy="NPi")
+EU_Transport_cars_elec_share <- rbind(EU_Transport_cars_elec_share_NoPolicy, EU_Transport_cars_elec_share_NPi) %>% mutate(value=100*value)
+
+WEU_CEU_Transport_cars_elec_share_NoPolicy <- filter(NoPolicy$ElectricShare_new_cars, region%in%c("WEU", "CEU"), year>=2000, year<=2030) %>% mutate(Policy="NoPolicy")
+WEU_CEU_Transport_cars_elec_share_NPi <- filter(NPi$ElectricShare_new_cars, region%in%c("WEU", "CEU"), year>=2000, year<=2030) %>% mutate(Policy="NPi")
+EU_CEU_Transport_cars_elec_share <- rbind(WEU_CEU_Transport_cars_elec_share_NoPolicy, WEU_CEU_Transport_cars_elec_share_NPi) %>% mutate(value=100*value)
+
+# TIMER scenarios only in target years
+EU_Transport_cars_target_years_elec_share <- filter(EU_Transport_cars_elec_share, year==2021 | year==2025 | year==2030)
+
+g_electric_new_cars <- ggplot() + 
+     geom_line(data=EU_Transport_cars_elec_share, aes(x=year, y=value, colour=Policy)) + 
+     geom_point(data=EU_Transport_cars_target_years_elec_share, aes(x=year, y=value, colour=Policy), size=2) + 
+     geom_point(data=filter(EU_hist_cars_electric_new, year.year<=2018), aes(x=year.year, y=`Share.of.electric.vehicles.....number`, colour="History")) +
+     geom_point(data=EU_elec_cars_target, aes(x=year, y=value, size=year), colour="brown4") +
+     theme_bw() +
+     scale_colour_manual(name="Scenario", values=c("History"="black", "NoPolicy"="darkgreen", "NPi"="blue"), 
+                                          labels=c("History"="History EU28 (EEA)", "NoPolicy"="No policy baseline", "NPi"="Current policies")) +
+     #scale_shape_discrete(name="TIMER Car type") +
+     scale_size_continuous(name="Electric share target", labels=EU_elec_cars_Target_year, breaks=EU_elec_cars_Target_year, range = c(2,3)) +
+     ylim(0, 40) +
+     #ylab(EU_Transport_cars_gCO2_km$unit) +
+     ggtitle("EU Share new registration\n electric cars\n in total car fleet") +
+     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+     guides(fill=guide_legend(reverse=TRUE))
+g_electric_new_cars_WEU_CEU <- ggplot(data=EU_CEU_Transport_cars_elec_share) + geom_line(aes(x=year, y=value, colour=Policy)) +
+                          facet_wrap(~region, nrow=2) +
+                          scale_colour_manual(name="Scenario", values=c("NoPolicy"="darkgreen", "NPi"="blue"), 
+                                          labels=c("NoPolicy"="No policy baseline", "NPi"="Current policies")) +
+                          ylim(0, 40) +
+                          theme_bw() +
+                          theme(axis.text.x = element_text(angle = 90, hjust = 1))
+g_electric_new_cars #+ g_electric_new_cars_WEU_CEU
+```
+
+Improvements: 
+* Calculate blending share for road freight vehicles. As structure is different in freight module, this is not straight forward
+
+### Future improvements for modelling co2 car standards
+
+* Include vans (other light-duty vehicles) --> but to which TIMER travel category do they belong, cars or medium trucks?
+* Improve co2 performance standards
+** Make load car dependent on TIMER data
+** Currently only of gasoline and diesel are used to calcualted co2-intensity fuels, and gasoline is assumed to be 43% and diesel 57%. Add other fuels such as gas and biofuels, and make weight dependent on TIMER share in fleet
+* EU CO2 standard allows for EV credits, add this to the TIMER indicator
+
+### Future improvements for modelling electric share
+
+* EU electric share target also includes plugins. Change TIMER indicator to include plugins.
+
+## CO2 performance standards for heavy-trucks
+
+```{r plot heavy trucks, echo=FALSE, eval=TRUE}
+
+# Targets
+EU_CO2_HvyT_Target_base = filter(NoPolicyi$CO2_intensity_fleet_new_HvyT_tailpipe_total, region=="EU", year==2021)
+EU_CO2_HvyT_Target_year = c(2025,2030)
+EU_CO2_HvyT_Target_value = c((1-0.15)*EU_CO2_HvyT_Target_base$value, (1-0.3)*EU_CO2_HvyT_Target_base$value)
+EU_CO2_HvyT_target <- data.frame(EU_CO2_HvyT_Target_year, EU_CO2_HvyT_Target_value) %>% 
+                     rename(year=EU_CO2_HvyT_Target_year, value=EU_CO2_HvyT_Target_value)
+
+# TIMER
+EU_TIMER_Transport_HvyT_Eff_new_NoPolicy <- filter(NoPolicyi$CO2_intensity_fleet_new_HvyT_tailpipe_total,region=="EU", year>=2000, year<=2030) %>% mutate(Policy="NoPolicy")
+EU_TIMER_Transport_HvyT_Eff_new_NPi <- filter(NPii$CO2_intensity_fleet_new_HvyT_tailpipe_total, region=="EU", year>=2000, year<=2030) %>% mutate(Policy="NPi")
+EU_TIMER_Transport_HvyT_Eff_new <- rbind(EU_TIMER_Transport_HvyT_Eff_new_NoPolicy, EU_TIMER_Transport_HvyT_Eff_new_NPi)
+
+# TIMER scenarios only in target years
+EU_TIMER_Transport_HvyT_target_years <- filter(EU_TIMER_Transport_HvyT_Eff_new, year==2025 | year==2030)
+
+g_HvyT <- ggplot(data=EU_TIMER_Transport_HvyT_Eff_new) + geom_line(aes(x=year, y=value, colour=Policy)) +
+  geom_point(data=EU_TIMER_Transport_HvyT_target_years, aes(x=year, y=value, colour=Policy), size=2) + 
+  geom_point(data=EU_CO2_HvyT_target, aes(x=year, y=value, size=year), colour="brown4") +
+  scale_colour_manual(name="Scenario", values=c("NoPolicy"="darkgreen", "NPi"="blue"), 
+                      labels=c("NoPolicy"="No policy baseline", "NPi"="Current policies")) +
+  scale_size_continuous(name="CO2 performance standard", labels=EU_CO2_HvyT_Target_year, breaks=EU_CO2_HvyT_Target_year, range = c(2,3)) +
+  theme_bw()
+g_HvyT
+
+
+```
+
+### Future improvements modeling heavy-trucks standard
+* Where do medium trucks fit? And how do they compare to light-duty vehicles?
+* Add busses (after 2022)
+
+# Building directive
+```{r plot Buildings, echo=FALSE, warning=FALSE}
+EU_hist_Buildings <- read.table("../data/IEA_IAMregions.csv", sep=";", header=TRUE) %>% as.data.frame()
+#EU_hist_Buildings <- filter(EU_hist_Buildings, region=="EU", variable %in%c('Final Energy|Residential and Commercial')) %>%
+#                     mutate(source="IEA") %>%
+#                     select(period, value) %>%
+#                    mutate(value=10^3*value, sector="Buildings", Policy="History") %>%
+#                     rename(year=period)
+EU_hist_Buildings <- filter(EU_hist_Buildings, region%in%c("WEU", "CEU"), variable %in%c('Final Energy|Residential and Commercial')) %>%
+                     spread(key=region, value=value) %>%
+                     mutate(value=WEU+CEU) %>%
+                     select(-WEU, -CEU) %>%
+                     mutate(source="History Europe (IEA)") %>%
+                     select(period, value) %>%
+                     mutate(value=10^3*value, sector="Buildings", Policy="History")
+ 
+
+# TIMER scenarios
+EU_TIMER_Building_NoPolicy <- filter(NoPolicy$FinalEnergy, region=="EU", year>=2000, year<=2030, sector%in%c('Residential', 'Service'), energy_carrier=="Total") %>% mutate(Policy="NoPolicy (v2015)")
+EU_TIMER_Building_NoPolicy_3_2 <- filter(NoPolicy_3_2$FinalEnergy, region=="EU", year>=2000, year<=2030, sector%in%c('Residential', 'Service'), energy_carrier=="Total") %>% mutate(Policy="NoPolicy (v3_2)")
+EU_TIMER_Building_NPi <- filter(NPi$FinalEnergy, region=="EU", year>=2000, year<=2030, sector%in%c('Residential', 'Service'), energy_carrier=="Total") %>% mutate(Policy="NPi")
+EU_TIMER_Building <- rbind(EU_TIMER_Building_NoPolicy, EU_TIMER_Building_NPi) %>% rbind(EU_TIMER_Building_NoPolicy_3_2) %>% select(-region, -unit, -energy_carrier)
+# Add total Buildings sectora and history as scenarios
+d_tmp <- group_by(EU_TIMER_Building, year, Policy) %>%
+         summarise(value=sum(value)) %>%
+         mutate(sector="Buildings") %>% as.data.frame()
+
+EU_TIMER_Building <- rbind(EU_TIMER_Building, d_tmp) %>% rbind(EU_hist_Buildings)
+
+reduction_NoPolicy_NPi_residential <- filter(EU_TIMER_Building, sector=="Residential", year==2030, Policy%in%c('NoPolicy (v2015)', 'NPi')) %>%
+                                      spread(key=Policy, value=value) %>%
+                                      mutate(reduction=100*(`NPi`/`NoPolicy (v2015)`-1))
+reduction_NoPolicy_NPi_service <- filter(EU_TIMER_Building, sector=="Service", year==2030, Policy%in%c('NoPolicy (v2015)', 'NPi')) %>%
+                                         spread(key=Policy, value=value) %>%
+                                          mutate(reduction=100*(`NPi`/`NoPolicy (v2015)`-1))
+
+# TIMER scenarios only in target years
+EU_Building_target_years <- filter(EU_TIMER_Building, year==2020 | year==2030) %>% 
+                            mutate(label=ifelse(sector=="Residential" & year==2030 & Policy=="NPi", paste0(round(reduction_NoPolicy_NPi_residential$reduction, 1),"%"), ""))
+         
+g_Building_EU <- ggplot() + 
+           geom_line(data=EU_TIMER_Building, aes(x=year, y=value, colour=Policy)) + 
+           geom_point(data=EU_Building_target_years, aes(x=year, y=value, colour=Policy), size=2) + 
+           geom_text(data=EU_Building_target_years, aes(x=year, y=value, label=label), nudge_x=-5, nudge_y=-800) +
+           #geom_point(data=EU_Building_Target, aes(x=year, y=value, size=year), colour="brown4") +
+           facet_wrap(~sector) +
+           theme_bw() +
+           scale_colour_manual(name="Scenario", values=c("History"="black", "NoPolicy (v2015)"="darkgreen", "NoPolicy (v3_2)"="chartreuse", "NPi"="blue"), 
+                               labels=c("History"="History IEA", "NoPolicy"="No policy baseline (v2015)", "NPi"="Current policies (v3_2)")) +
+           ylim(0, NA) +
+           ylab(EU_TIMER_Building$unit[1]) +
+           ggtitle("Buildings") +
+           theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+           guides(fill=guide_legend(reverse=TRUE))
+g_Building_EU
+ 
+```
+
+
+# F-Gas regulation
+```{r plot F-gases, echo=FALSE, warning=FALSE}
+#d_EU_FGas_EU28_hist <- filter(GHG_emissions_UNFCCC, Region=="EU28", Gas=="FGases", Sector=="Total") %>% select(-Country, -Sector,-SubSector)
+d_EU_FGas_EU28_hist <- filter(GHG_emissions_UNFCCC_TIMER, Region%in%c("WEU", "CEU"), Gas=="FGases", Sector=="Total") %>% select(-Country, -Sector,-SubSector) %>%
+                       spread(key=Region, value=Value) %>%
+                       mutate(Value=WEU+CEU) %>%
+                       select(-WEU, -CEU)
+
+# Targets
+EU_FGas_Target_base_2020 = filter(d_EU_FGas_EU28_hist, Year==2015)$Value
+EU_FGas_Target_base_2030 = filter(d_EU_FGas_EU28_hist, Year==2014)$Value
+EU_FGas_Target_year = c(2020,2030)
+EU_FGas_Target_value = c((1-37/100)*EU_FGas_Target_base_2020,(1-2/3)*EU_FGas_Target_base_2030)
+EU_FGas_Target <- data.frame(EU_FGas_Target_year, EU_FGas_Target_value) %>% 
+  rename(year=EU_FGas_Target_year, value=EU_FGas_Target_value)
+#pander(EU_FGas_target)
+
+# TIMER scenarios
+EU_TIMER_FGas_NoPolicy <- filter(NoPolicyi$FGases, region=="EU", year>=2000, year<=2030) %>% mutate(Policy="NoPolicy (v2015)")
+EU_TIMER_FGas_NoPolicy_3_2 <- filter(NoPolicy_3_2i$FGases, region=="EU", year>=2000, year<=2030) %>% mutate(Policy="NoPolicy (v3_2)")
+EU_TIMER_FGas_NPi <- filter(NPii$FGases, region=="EU", year>=2000, year<=2030) %>% mutate(Policy="NPi")
+EU_TIMER_FGas <- rbind(EU_TIMER_FGas_NoPolicy, EU_TIMER_FGas_NPi) %>% rbind(EU_TIMER_FGas_NoPolicy_3_2) %>% select(-region, -unit)
+
+# add history as scenario
+d_tmp <- select(d_EU_FGas_EU28_hist, Year, Value) %>% 
+         rename(value=Value, year=Year) %>% 
+          mutate(Policy="History")
+EU_TIMER_FGas <- rbind(EU_TIMER_FGas, d_tmp)
+
+# TIMER scenarios only in target years
+EU_FGas_target_years <- filter(EU_TIMER_FGas, year==2020 | year==2030)
+
+g_FGas_EU <- ggplot() + 
+  geom_line(data=EU_TIMER_FGas, aes(x=year, y=value, colour=Policy)) + 
+  geom_point(data=EU_FGas_target_years, aes(x=year, y=value, colour=Policy), size=2) + 
+  #geom_point(data=d_EU_FGas_EU28_hist, aes(x=Year, y=Value, linetype=Source)) +
+  geom_point(data=EU_FGas_Target, aes(x=year, y=value, size=year), colour="brown4") +
+  theme_bw() +
+  scale_colour_manual(name="Scenario", values=c("History"="black", "NoPolicy (v2015)"="darkgreen", "NoPolicy (v3_2)"="chartreuse", "NPi"="blue"), 
+                      labels=c("History"="History UNFCCC", "NoPolicy"="No policy baseline (v2015)", "NPi"="CurFGast policies (v3_2)")) +
+  scale_size_continuous(name="FGas targets", labels=EU_FGas_Target_year, breaks=EU_FGas_Target_year, range = c(2,3)) +
+  ylim(0, NA) +
+  ylab(EU_TIMER_FGas$unit[1]) +
+  ggtitle("Fluorinated gases") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  guides(fill=guide_legend(reverse=TRUE))
+g_FGas_EU 
+```
